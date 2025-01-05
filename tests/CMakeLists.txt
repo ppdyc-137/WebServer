@@ -1,0 +1,7 @@
+include_directories("../src")
+
+add_executable(test_config test_config.cpp)
+target_link_libraries(test_config PRIVATE
+    sylar
+    spdlog::spdlog
+)
