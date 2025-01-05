@@ -1,0 +1,34 @@
+Checks: '
+bugprone-*,
+cppcoreguidelines-*,
+performance-*,
+modernize-*,
+google-*,
+misc-*,
+cert-*,
+readability-*,
+clang-analyzer-*,
+performance-*,
+portability-*,
+-modernize-use-trailing-return-type,
+-modernize-use-nodiscard,
+-misc-no-recursion,
+-cppcoreguidelines-non-private-member-variables-in-classes,
+-misc-non-private-member-variables-in-classes,
+'
+
+WarningsAsErrors: ''
+
+CheckOptions:
+  - { key: readability-identifier-naming.ClassCase,           value: CamelCase  }
+  - { key: readability-identifier-naming.EnumCase,            value: CamelCase  }
+  - { key: readability-identifier-naming.FunctionCase,        value: camelBack  }
+  - { key: readability-identifier-naming.GlobalConstantCase,  value: UPPER_CASE }
+  - { key: readability-identifier-naming.MemberCase,          value: lower_case }
+  - { key: readability-identifier-naming.MemberSuffix,        value: _          }
+  - { key: readability-identifier-naming.NamespaceCase,       value: lower_case }
+  - { key: readability-identifier-naming.StructCase,          value: CamelCase  }
+  - { key: readability-identifier-naming.UnionCase,           value: CamelCase  }
+  - { key: readability-identifier-naming.VariableCase,        value: lower_case }
+
+
