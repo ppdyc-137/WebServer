@@ -15,6 +15,10 @@ portability-*,
 -misc-no-recursion,
 -cppcoreguidelines-non-private-member-variables-in-classes,
 -misc-non-private-member-variables-in-classes,
+-google-readability-todo,
+-cppcoreguidelines-pro-type-vararg,
+-cppcoreguidelines-special-member-functions,
+-cppcoreguidelines-avoid-const-or-ref-data-members,
 '
 
 WarningsAsErrors: ''
