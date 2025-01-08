@@ -1,6 +1,7 @@
 add_library(sylar SHARED
     config.cpp
     thread.cpp
+    mutex.cpp
 )
 
 target_link_libraries(sylar PRIVATE
