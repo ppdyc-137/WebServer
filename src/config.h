@@ -9,6 +9,7 @@
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/yaml.h>
 
+#include "mutex.h"
 #include "util.h"
 
 namespace sylar {
@@ -65,17 +66,22 @@ namespace sylar {
             : ConfigVarBase(name, description), val_(val) {}
 
         void setValue(T const& val) {
-            if (val_ == val) {
+            T old_val = value();
+            if (old_val == val) {
                 return;
             }
 
             for (const auto& [_, callback] : listeners_) {
-                callback(val_, val);
+                callback(old_val, val);
             }
 
+            WriteLockGuard<RWMutex> lock(mutex_);
             val_ = val;
         }
-        T value() const { return val_; }
+        T value() {
+            ReadLockGuard<RWMutex> lock(mutex_);
+            return val_;
+        }
 
         bool fromString(std::string const& str) override {
             try {
@@ -88,16 +94,22 @@ namespace sylar {
         }
         std::string toString() const override {
             try {
-                return Convert<T>::toString(val_);
+                return Convert<T>::toString(value());
             } catch (std::exception& e) {
                 spdlog::error("Config::to_string exception: convert {}: {} to std::string", name_, typeName());
             }
             return "";
         }
 
-        void addListener(int uid, callback_type callback) { listeners_.emplace(uid, callback); }
+        int addListener(callback_type callback) {
+            static int uid = 0;
+            WriteLockGuard<RWMutex> lock(mutex_);
+            listeners_.emplace(uid++, callback);
+            return uid;
+        }
 
         void delListener(int uid) {
+            WriteLockGuard<RWMutex> lock(mutex_);
             if (auto iter = listeners_.find(uid); iter != listeners_.end()) {
                 listeners_.erase(iter);
             }
@@ -108,30 +120,39 @@ namespace sylar {
     private:
         T val_;
         std::unordered_map<int, callback_type> listeners_;
+        RWMutex mutex_;
     };
 
     class Config {
     public:
         using data_type = std::unordered_map<std::string, std::shared_ptr<ConfigVarBase>>;
+        using mutex_type = RWMutex;
 
         template <typename T>
         static std::shared_ptr<ConfigVar<T>> lookup(std::string const& name, T const& val,
                                                     std::string const& description) {
-            if (auto iter = data().find(name); iter != data().end()) {
-                if (auto res = std::dynamic_pointer_cast<ConfigVar<T>>(iter->second); res) {
-                    return res;
+            {
+                ReadLockGuard lock(mutex());
+                if (auto iter = data().find(name); iter != data().end()) {
+                    if (auto res = std::dynamic_pointer_cast<ConfigVar<T>>(iter->second); res) {
+                        return res;
+                    }
+                    spdlog::warn("Config::lookup: type dismatch, look for {}: {} but found {}", name,
+                                 typenameDemangle<T>(), iter->second->typeName());
+                    return nullptr;
                 }
-                spdlog::warn("Config::lookup: type dismatch, look for {}: {} but found {}", name, typenameDemangle<T>(),
-                             iter->second->typeName());
-                return nullptr;
             }
             auto config = std::make_shared<ConfigVar<T>>(name, val, description);
-            data()[name] = config;
+            {
+                WriteLockGuard lock(mutex());
+                data()[name] = config;
+            }
             return config;
         }
 
         template <typename T>
         static std::shared_ptr<ConfigVar<T>> lookup(std::string const& name) {
+            ReadLockGuard lock(mutex());
             if (auto iter = data().find(name); iter != data().end()) {
                 if (auto res = std::dynamic_pointer_cast<ConfigVar<T>>(iter->second); res) {
                     return res;
@@ -148,6 +169,11 @@ namespace sylar {
         static data_type& data() {
             static data_type data;
             return data;
+        }
+
+        static mutex_type& mutex() {
+            static mutex_type mutex;
+            return mutex;
         }
     };
 

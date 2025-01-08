@@ -18,6 +18,7 @@ namespace sylar {
         std::list<std::pair<std::string, YAML::Node>> configs;
         walkNode("", root, configs);
 
+        ReadLockGuard lock(mutex());
         for (const auto& [name, node] : configs) {
             if (auto iter = data().find(name); iter != data().end()) {
                 auto node_str = YAML::Dump(node);

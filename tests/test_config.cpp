@@ -37,7 +37,7 @@ int main() {
     auto config_name = sylar::Config::lookup<std::string>("name", "None", "");
     auto config_age = sylar::Config::lookup<int>("age", 0, "");
     auto config_person = sylar::Config::lookup<Person>("person", {}, "");
-    config_person->addListener(0, [](auto const& old_val, auto const& new_val) {
+    config_person->addListener([](auto const& old_val, auto const& new_val) {
         std::cout << std::format("update: {} to {}", old_val.toString(), new_val.toString()) << '\n';
     });
     auto config_vec = sylar::Config::lookup<std::vector<int>>("vec", {}, "");
