@@ -3,36 +3,36 @@
 #include <functional>
 #include <pthread.h>
 
-#include <string>
 #include <latch>
+#include <string>
 
 namespace saylar {
 
-class Thread {
-public:
-    using thread_func = std::function<void()>;
+    class Thread {
+    public:
+        using thread_func = std::function<void()>;
 
-    explicit Thread(thread_func, std::string = "UNKNOWN");
-    ~Thread();
+        explicit Thread(thread_func, std::string = "UNKNOWN");
+        ~Thread();
 
-    void start();
-    void join();
+        void start();
+        void join();
 
-    std::string const& getName() const { return name_; }
-    pid_t getTid() const { return tid_; }
+        std::string const& getName() const { return name_; }
+        pid_t getTid() const { return tid_; }
 
-    static Thread* getCurrentThread();
+        static Thread* getCurrentThread();
 
-private:
-    static void* run(void*);
+    private:
+        static void* run(void*);
 
-    pthread_t thread_{};
-    thread_func func_;
-    std::string name_;
-    pid_t tid_{};
-    std::latch latch_{1};
+        pthread_t thread_{};
+        thread_func func_;
+        std::string name_;
+        pid_t tid_{};
+        std::latch latch_{1};
 
-    static inline thread_local Thread* current_thread{};
-};
+        static inline thread_local Thread* current_thread{};
+    };
 
 } // namespace saylar

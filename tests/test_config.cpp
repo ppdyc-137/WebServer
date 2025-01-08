@@ -18,17 +18,17 @@ struct Person {
 
 namespace sylar {
 
-template <>
-struct Convert<Person> {
-    static Person fromString(std::string const& str) {
-        auto node = YAML::Load(str);
-        Person rhs;
-        rhs.name_ = node["name"].as<std::string>();
-        rhs.age_ = node["age"].as<int>();
-        return rhs;
-    }
-    static std::string toString(Person const& val) { return val.toString(); }
-};
+    template <>
+    struct Convert<Person> {
+        static Person fromString(std::string const& str) {
+            auto node = YAML::Load(str);
+            Person rhs;
+            rhs.name_ = node["name"].as<std::string>();
+            rhs.age_ = node["age"].as<int>();
+            return rhs;
+        }
+        static std::string toString(Person const& val) { return val.toString(); }
+    };
 
 } // namespace sylar
 
@@ -37,12 +37,12 @@ int main() {
     auto config_name = sylar::Config::lookup<std::string>("name", "None", "");
     auto config_age = sylar::Config::lookup<int>("age", 0, "");
     auto config_person = sylar::Config::lookup<Person>("person", {}, "");
-    config_person->addListener(0, [](auto const& old_val, auto const & new_val) {
+    config_person->addListener(0, [](auto const& old_val, auto const& new_val) {
         std::cout << std::format("update: {} to {}", old_val.toString(), new_val.toString()) << '\n';
     });
     auto config_vec = sylar::Config::lookup<std::vector<int>>("vec", {}, "");
 
-    const auto *yaml = R"(
+    const auto* yaml = R"(
     name: "ppdy"
     age: 12
     person:
