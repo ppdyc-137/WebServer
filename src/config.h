@@ -78,7 +78,7 @@ namespace sylar {
             WriteLockGuard<RWMutex> lock(mutex_);
             val_ = val;
         }
-        T value() {
+        T value() const {
             ReadLockGuard<RWMutex> lock(mutex_);
             return val_;
         }
@@ -120,7 +120,7 @@ namespace sylar {
     private:
         T val_;
         std::unordered_map<int, callback_type> listeners_;
-        RWMutex mutex_;
+        mutable RWMutex mutex_;
     };
 
     class Config {
