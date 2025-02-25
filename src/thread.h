@@ -6,7 +6,7 @@
 #include <latch>
 #include <string>
 
-namespace saylar {
+namespace sylar {
 
     class Thread {
     public:
@@ -22,6 +22,7 @@ namespace saylar {
         pid_t getTid() const { return tid_; }
 
         static Thread* getCurrentThread();
+        static pid_t getCurrentThreadId();
 
     private:
         static void* run(void*);
@@ -35,4 +36,4 @@ namespace saylar {
         static inline thread_local Thread* current_thread{};
     };
 
-} // namespace saylar
+} // namespace sylar

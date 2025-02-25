@@ -8,7 +8,7 @@
 
 #include <spdlog/spdlog.h>
 
-namespace saylar {
+namespace sylar {
 
     Thread::Thread(thread_func func, std::string name) : func_(std::move(func)), name_(std::move(name)) {}
 
@@ -58,5 +58,6 @@ namespace saylar {
     }
 
     Thread* Thread::getCurrentThread() { return current_thread; }
+    pid_t Thread::getCurrentThreadId() { return current_thread->tid_; }
 
-} // namespace saylar
+} // namespace sylar

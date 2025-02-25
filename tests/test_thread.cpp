@@ -13,7 +13,7 @@
 int main() {
     spdlog::set_level(spdlog::level::debug);
 
-    std::vector<std::shared_ptr<saylar::Thread>> threads;
+    std::vector<std::shared_ptr<sylar::Thread>> threads;
 
     {
         std::size_t counter = 0;
@@ -27,7 +27,7 @@ int main() {
         };
 
         for (size_t i = 0; i < 5; i++) {
-            auto thread = std::make_shared<saylar::Thread>(worker, std::format("thread_{}", i));
+            auto thread = std::make_shared<sylar::Thread>(worker, std::format("thread_{}", i));
             thread->start();
             threads.push_back(std::move(thread));
         }
@@ -61,12 +61,12 @@ int main() {
     //     };
     //
     //     for (size_t i = 0; i < 5; i++) {
-    //         auto thread = std::make_shared<saylar::Thread>(reader, std::format("thread_read_{}", i));
+    //         auto thread = std::make_shared<sylar::Thread>(reader, std::format("thread_read_{}", i));
     //         thread->start();
     //         threads.push_back(std::move(thread));
     //     }
     //     for (size_t i = 0; i < 5; i++) {
-    //         auto thread = std::make_shared<saylar::Thread>(writer, std::format("thread_write_{}", i));
+    //         auto thread = std::make_shared<sylar::Thread>(writer, std::format("thread_write_{}", i));
     //         thread->start();
     //         threads.push_back(std::move(thread));
     //     }
