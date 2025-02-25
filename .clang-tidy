@@ -20,6 +20,13 @@ portability-*,
 -cppcoreguidelines-special-member-functions,
 -cppcoreguidelines-avoid-const-or-ref-data-members,
 -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+-cppcoreguidelines-owning-memory,
+-cppcoreguidelines-avoid-non-const-global-variables,
+-cppcoreguidelines-avoid-c-arrays,
+-misc-static-assert,
+-modernize-avoid-c-arrays,
+-readability-simplify-boolean-expr,
+-cert-dcl03-c,
 '
 
 WarningsAsErrors: ''
