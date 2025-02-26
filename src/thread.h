@@ -13,6 +13,8 @@ namespace sylar {
         using thread_func = std::function<void()>;
 
         explicit Thread(thread_func, std::string = "UNKNOWN");
+        // a moved thread cannot be used again
+        Thread(Thread&&) noexcept;
         ~Thread();
 
         void start();

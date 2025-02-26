@@ -1,4 +1,5 @@
 #include "thread.h"
+#include "util.h"
 
 #include <cstring>
 #include <pthread.h>
@@ -11,6 +12,9 @@
 namespace sylar {
 
     Thread::Thread(thread_func func, std::string name) : func_(std::move(func)), name_(std::move(name)) {}
+    Thread::Thread(Thread&& other) noexcept
+        : thread_(std::exchange(other.thread_, 0)), func_(std::exchange(other.func_, nullptr)),
+          name_(std::exchange(other.name_, "")), tid_(std::exchange(other.tid_, 0)) {}
 
     Thread::~Thread() {
         if (thread_ != 0) {
@@ -19,6 +23,7 @@ namespace sylar {
     }
 
     void Thread::start() {
+        SYLAR_ASSERT(func_ != nullptr);
         auto ret = pthread_create(&thread_, nullptr, &Thread::run, this);
         if (ret != 0) {
             spdlog::error("Thread::start: pthread_create error: {}", std::strerror(ret));
@@ -52,7 +57,9 @@ namespace sylar {
         pthread_setname_np(thread->thread_, thread->name_.substr(0, PTHREAD_NAME_MAX_LENGTH).c_str());
 
         thread->latch_.count_down();
-        thread->func_();
+
+        auto func = thread->func_;
+        func();
 
         return nullptr;
     }
