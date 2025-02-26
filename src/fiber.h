@@ -26,7 +26,8 @@ namespace sylar {
         ~Fiber();
 
         void swapIn();
-        void swapOut();
+        void swapOut(State state = HOLD);
+        static void yield(State state = HOLD);
 
         uint64_t getId() const { return id_; }
         State getState() const { return state_; }
@@ -50,7 +51,7 @@ namespace sylar {
 
         static inline std::atomic<uint64_t> g_fiber_id{};
         static inline std::atomic<uint64_t> g_fiber_count{};
-        static inline thread_local std::shared_ptr<Fiber> t_main_fiber{};
+        static inline thread_local std::shared_ptr<Fiber> t_main_fiber{newMainFiber()};
         static inline thread_local Fiber* t_current_fiber{};
     };
 

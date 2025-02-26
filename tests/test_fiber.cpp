@@ -19,15 +19,13 @@ public:
 };
 
 void foo() {
-    auto fiber = sylar::Fiber::getCurrentFiber();
-    spdlog::info("hello {}", fiber->getId());
-    fiber->swapOut();
-    spdlog::info("bye   {}", fiber->getId());
+    spdlog::info("hello");
+    sylar::Fiber::yield();
+    spdlog::info("bye");
 }
 
 void test() {
-    auto fiber = sylar::Fiber::getCurrentFiber();
-    spdlog::info("begin test {}", fiber->getId());
+    spdlog::info("begin test");
     {
         auto fiber = std::make_shared<sylar::Fiber>(foo);
         spdlog::info("before {}", fiber->getId());
@@ -36,7 +34,7 @@ void test() {
         fiber->swapIn();
         spdlog::info("second swapOut {}", fiber->getId());
     }
-    spdlog::info("leave test {}", fiber->getId());
+    spdlog::info("leave test");
 }
 
 int main() {

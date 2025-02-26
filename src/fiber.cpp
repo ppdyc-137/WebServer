@@ -1,4 +1,5 @@
 #include "fiber.h"
+#include "scheduler.h"
 #include "util.h"
 #include <cerrno>
 #include <cstdlib>
@@ -54,8 +55,7 @@ namespace sylar {
         if (t_current_fiber != nullptr) {
             return t_current_fiber->shared_from_this();
         }
-        t_main_fiber = newMainFiber();
-        SYLAR_ASSERT(t_current_fiber == t_main_fiber.get());
+        SYLAR_ASSERT(t_main_fiber != nullptr);
         return t_main_fiber;
     }
 
@@ -67,19 +67,32 @@ namespace sylar {
     }
 
     void Fiber::swapIn() {
-        SYLAR_ASSERT(t_current_fiber != nullptr);
-        t_current_fiber->state_ = HOLD;
+        // make sure t_main_fiber is initialized
+        SYLAR_ASSERT(t_main_fiber != nullptr);
+        SYLAR_ASSERT2(t_current_fiber == Scheduler::getCurrentSchedulerFiber() || t_current_fiber == t_main_fiber.get(),
+                      "only scheduler fiber and main fiber can swap into a fiber");
+
         state_ = EXEC;
         auto* cur = t_current_fiber;
         t_current_fiber = this;
         SYLAR_ASSERT2(swapcontext(&cur->context_, &context_) != -1, std::strerror(errno));
     }
 
-    void Fiber::swapOut() {
-        t_current_fiber = t_main_fiber.get();
-        t_main_fiber->state_ = EXEC;
-        state_ = HOLD;
+    void Fiber::swapOut(State state) {
+        SYLAR_ASSERT(t_current_fiber == this);
+
+        // a fiber can only swap out to the scheduler fiber and main fiber
+        auto* scheduler_fiber = Scheduler::getCurrentSchedulerFiber();
+        t_current_fiber = (scheduler_fiber != nullptr) ? scheduler_fiber : t_main_fiber.get();
+
+        state_ = state;
         SYLAR_ASSERT2(swapcontext(&context_, &t_main_fiber->context_) != -1, std::strerror(errno));
+    }
+
+    void Fiber::yield(State state) {
+        SYLAR_ASSERT(t_current_fiber != nullptr);
+        SYLAR_ASSERT(t_current_fiber->state_ == EXEC);
+        t_current_fiber->swapOut(state);
     }
 
     void Fiber::run() {
