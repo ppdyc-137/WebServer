@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -34,8 +35,8 @@ namespace sylar {
         static uint64_t getCurrentFiberId();
 
     private:
-        // TODO initialize main fiber in new thread
         Fiber(); // main fiber in new thread
+        static std::shared_ptr<Fiber> newMainFiber();
 
         static void run();
 
@@ -46,6 +47,11 @@ namespace sylar {
         fiber_function func_;
         std::unique_ptr<char[]> stack_;
         ucontext_t context_{};
+
+        static inline std::atomic<uint64_t> g_fiber_id{};
+        static inline std::atomic<uint64_t> g_fiber_count{};
+        static inline thread_local std::shared_ptr<Fiber> t_main_fiber{};
+        static inline thread_local Fiber* t_current_fiber{};
     };
 
 } // namespace sylar

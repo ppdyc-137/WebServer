@@ -1,6 +1,5 @@
 #include "fiber.h"
 #include "util.h"
-#include <atomic>
 #include <cerrno>
 #include <cstdlib>
 #include <memory>
@@ -9,12 +8,6 @@
 
 namespace sylar {
     constexpr size_t STACK_ALIGNMENT = 8;
-    namespace {
-        std::atomic<uint64_t> g_fiber_id{};
-        std::atomic<uint64_t> g_fiber_count{};
-        thread_local Fiber* t_current_fiber{};
-        thread_local std::shared_ptr<Fiber> t_main_fiber{};
-    } // namespace
 
     Fiber::Fiber() : id_(++g_fiber_id), state_(EXEC) {
         t_current_fiber = this;
@@ -23,6 +16,8 @@ namespace sylar {
         ++g_fiber_count;
         spdlog::debug("Fiber::Fiber: main fiber, id:{}", id_);
     }
+
+    std::shared_ptr<Fiber> Fiber::newMainFiber() { return std::shared_ptr<Fiber>{new Fiber()}; }
 
     Fiber::Fiber(fiber_function func, uint32_t stack_size)
         : id_(++g_fiber_id), stack_size_(stack_size), func_(std::move(func)),
@@ -59,7 +54,7 @@ namespace sylar {
         if (t_current_fiber != nullptr) {
             return t_current_fiber->shared_from_this();
         }
-        t_main_fiber.reset(new Fiber());
+        t_main_fiber = newMainFiber();
         SYLAR_ASSERT(t_current_fiber == t_main_fiber.get());
         return t_main_fiber;
     }
@@ -68,9 +63,7 @@ namespace sylar {
         if (t_current_fiber != nullptr) {
             return t_current_fiber->id_;
         }
-        t_main_fiber.reset(new Fiber());
-        SYLAR_ASSERT(t_current_fiber == t_main_fiber.get());
-        return t_main_fiber->id_;
+        return 0;
     }
 
     void Fiber::swapIn() {

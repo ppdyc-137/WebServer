@@ -58,6 +58,6 @@ namespace sylar {
     }
 
     Thread* Thread::getCurrentThread() { return current_thread; }
-    pid_t Thread::getCurrentThreadId() { return current_thread->tid_; }
+    pid_t Thread::getCurrentThreadId() { return static_cast<pid_t>(::syscall(SYS_gettid)); }
 
 } // namespace sylar
