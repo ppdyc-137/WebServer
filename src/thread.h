@@ -23,7 +23,7 @@ namespace sylar {
         std::string const& getName() const { return name_; }
         pid_t getTid() const { return tid_; }
 
-        static Thread* getCurrentThread();
+        static std::string getCurrentThreadName();
         static pid_t getCurrentThreadId();
 
     private:
@@ -34,8 +34,6 @@ namespace sylar {
         std::string name_;
         pid_t tid_{};
         std::latch latch_{1};
-
-        static inline thread_local Thread* current_thread{};
     };
 
 } // namespace sylar

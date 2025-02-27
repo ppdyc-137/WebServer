@@ -28,13 +28,13 @@ int main() {
 
     sylar::Fiber::getCurrentFiber();
 
-    std::vector<std::shared_ptr<sylar::Thread>> threads;
+    std::vector<sylar::Thread> threads;
     for (int i = 0; i < 5; i++) {
-        auto thread = std::make_shared<sylar::Thread>(test);
-        thread->start();
+        auto thread = sylar::Thread(test, std::format("test_{}", i));
+        thread.start();
         threads.emplace_back(std::move(thread));
     }
     for (auto& thread : threads) {
-        thread->join();
+        thread.join();
     }
 }

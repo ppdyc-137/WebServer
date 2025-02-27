@@ -51,10 +51,8 @@ namespace sylar {
         auto* thread = static_cast<Thread*>(arg);
         thread->tid_ = static_cast<pid_t>(::syscall(SYS_gettid));
 
-        spdlog::debug("Thread::run: name: {}, tid: {}", thread->name_, thread->tid_);
-
-        current_thread = thread;
         pthread_setname_np(thread->thread_, thread->name_.substr(0, PTHREAD_NAME_MAX_LENGTH).c_str());
+        spdlog::debug("Thread::run: name: {}, tid: {}", thread->name_, thread->tid_);
 
         thread->latch_.count_down();
 
@@ -64,7 +62,12 @@ namespace sylar {
         return nullptr;
     }
 
-    Thread* Thread::getCurrentThread() { return current_thread; }
+    std::string Thread::getCurrentThreadName() {
+        auto thread = pthread_self();
+        char buf[PTHREAD_NAME_MAX_LENGTH + 1];
+        pthread_getname_np(thread, buf, PTHREAD_NAME_MAX_LENGTH + 1);
+        return buf;
+    }
     pid_t Thread::getCurrentThreadId() { return static_cast<pid_t>(::syscall(SYS_gettid)); }
 
 } // namespace sylar

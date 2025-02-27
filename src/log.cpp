@@ -12,10 +12,7 @@ public:
     void format(const spdlog::details::log_msg& /*msg*/, const std::tm& /*tm_time*/,
                 spdlog::memory_buf_t& dest) override {
         std::string text{};
-        if (auto* thread = sylar::Thread::getCurrentThread(); thread != nullptr) {
-            text += thread->getName() + " ";
-        }
-        text += std::format("{} {}", sylar::Thread::getCurrentThreadId(), sylar::Fiber::getCurrentFiberId());
+        text += std::format("{} {} {}", sylar::Thread::getCurrentThreadName(), sylar::Thread::getCurrentThreadId(), sylar::Fiber::getCurrentFiberId());
         dest.append(text.data(), text.data() + text.size());
     }
 
