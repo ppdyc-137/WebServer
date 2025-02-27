@@ -11,7 +11,7 @@ namespace sylar {
 
     class Fiber : public std::enable_shared_from_this<Fiber> {
     public:
-        using fiber_function = std::function<void()>;
+        using FiberFunc = std::function<void()>;
         enum State : uint8_t {
             INIT,
             READY,
@@ -22,7 +22,7 @@ namespace sylar {
         };
 
         constexpr static uint32_t DEFAULT_STACK_SIZE = 4 * 1024 * 1024;
-        explicit Fiber(fiber_function func, uint32_t stack_size = DEFAULT_STACK_SIZE);
+        explicit Fiber(FiberFunc func, uint32_t stack_size = DEFAULT_STACK_SIZE);
         ~Fiber();
 
         void swapIn();
@@ -45,7 +45,7 @@ namespace sylar {
         State state_{INIT};
         uint32_t stack_size_{};
 
-        fiber_function func_;
+        FiberFunc func_;
         std::unique_ptr<char[]> stack_;
         ucontext_t context_{};
 

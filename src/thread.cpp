@@ -11,7 +11,7 @@
 
 namespace sylar {
 
-    Thread::Thread(thread_func func, std::string name) : func_(std::move(func)), name_(std::move(name)) {}
+    Thread::Thread(ThreadFunc func, std::string name) : func_(std::move(func)), name_(std::move(name)) {}
     Thread::Thread(Thread&& other) noexcept
         : thread_(std::exchange(other.thread_, 0)), func_(std::exchange(other.func_, nullptr)),
           name_(std::exchange(other.name_, "")), tid_(std::exchange(other.tid_, 0)) {}

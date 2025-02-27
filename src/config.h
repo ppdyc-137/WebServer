@@ -60,7 +60,7 @@ namespace sylar {
     template <typename T>
     class ConfigVar : public ConfigVarBase {
     public:
-        using callback_type = std::function<void(T const&, T const&)>;
+        using CallbackFunc = std::function<void(T const&, T const&)>;
 
         ConfigVar(std::string const& name, T const& val, std::string const& description)
             : ConfigVarBase(name, description), val_(val) {}
@@ -101,7 +101,7 @@ namespace sylar {
             return "";
         }
 
-        int addListener(callback_type callback) {
+        int addListener(CallbackFunc callback) {
             static int uid = 0;
             WriteLockGuard<RWMutex> lock(mutex_);
             listeners_.emplace(uid++, callback);
@@ -119,14 +119,14 @@ namespace sylar {
 
     private:
         T val_;
-        std::unordered_map<int, callback_type> listeners_;
+        std::unordered_map<int, CallbackFunc> listeners_;
         mutable RWMutex mutex_;
     };
 
     class Config {
     public:
-        using data_type = std::unordered_map<std::string, std::shared_ptr<ConfigVarBase>>;
-        using mutex_type = RWMutex;
+        using DateType = std::unordered_map<std::string, std::shared_ptr<ConfigVarBase>>;
+        using MutexType = RWMutex;
 
         template <typename T>
         static std::shared_ptr<ConfigVar<T>> lookup(std::string const& name, T const& val,
@@ -166,13 +166,13 @@ namespace sylar {
         static void loadFromYaml(YAML::Node const&);
 
     private:
-        static data_type& data() {
-            static data_type data;
+        static DateType& data() {
+            static DateType data;
             return data;
         }
 
-        static mutex_type& mutex() {
-            static mutex_type mutex;
+        static MutexType& mutex() {
+            static MutexType mutex;
             return mutex;
         }
     };

@@ -10,9 +10,9 @@ namespace sylar {
 
     class Thread {
     public:
-        using thread_func = std::function<void()>;
+        using ThreadFunc = std::function<void()>;
 
-        explicit Thread(thread_func, std::string = "UNKNOWN");
+        explicit Thread(ThreadFunc, std::string = "UNKNOWN");
         // a moved thread cannot be used again
         Thread(Thread&&) noexcept;
         ~Thread();
@@ -30,7 +30,7 @@ namespace sylar {
         static void* run(void*);
 
         pthread_t thread_{};
-        thread_func func_;
+        ThreadFunc func_;
         std::string name_;
         pid_t tid_{};
         std::latch latch_{1};
