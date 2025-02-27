@@ -4,6 +4,7 @@ add_library(sylar SHARED
     mutex.cpp
     fiber.cpp
     log.cpp
+    scheduler.cpp
 )
 
 target_link_libraries(sylar PRIVATE
