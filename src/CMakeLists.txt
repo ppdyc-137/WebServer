@@ -3,6 +3,7 @@ add_library(sylar SHARED
     thread.cpp
     mutex.cpp
     fiber.cpp
+    log.cpp
 )
 
 target_link_libraries(sylar PRIVATE

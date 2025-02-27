@@ -27,6 +27,7 @@ portability-*,
 -modernize-avoid-c-arrays,
 -readability-simplify-boolean-expr,
 -cert-dcl03-c,
+-cert-err58-cpp,
 '
 
 WarningsAsErrors: ''
