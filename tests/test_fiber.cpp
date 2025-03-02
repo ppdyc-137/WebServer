@@ -1,6 +1,5 @@
 #include "fiber.h"
 #include "thread.h"
-#include <memory>
 #include <spdlog/common.h>
 #include <spdlog/spdlog.h>
 
@@ -13,7 +12,7 @@ void foo() {
 void test() {
     spdlog::info("begin test");
     {
-        auto fiber = std::make_shared<sylar::Fiber>(foo);
+        auto fiber = sylar::Fiber::newFiber(foo);
         spdlog::info("before {}", fiber->getId());
         fiber->swapIn();
         spdlog::info("first swapOut {}", fiber->getId());

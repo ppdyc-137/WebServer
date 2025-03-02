@@ -87,11 +87,11 @@ namespace sylar {
         }
         cond_.notify_all();
     }
-    void Scheduler::schedule(Fiber::FiberFunc func, std::size_t num) {
+    void Scheduler::schedule(Fiber::FiberFunc const& func, std::size_t num) {
         {
             std::scoped_lock<std::mutex> lock(mutex_);
             for (std::size_t i = 0; i < num; i++) {
-                tasks_.push(std::make_shared<Fiber>(func));
+                tasks_.push(Fiber::newFiber(func));
             }
         }
         cond_.notify_all();

@@ -19,6 +19,9 @@ namespace sylar {
     }
 
     std::shared_ptr<Fiber> Fiber::newMainFiber() { return std::shared_ptr<Fiber>{new Fiber()}; }
+    std::shared_ptr<Fiber> Fiber::newFiber(FiberFunc func, uint32_t stack_size) {
+        return std::shared_ptr<Fiber>(new Fiber(std::move(func), stack_size));
+    }
 
     Fiber::Fiber(FiberFunc func, uint32_t stack_size)
         : id_(++g_fiber_id), stack_size_(stack_size), func_(std::move(func)),

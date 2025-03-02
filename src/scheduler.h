@@ -20,7 +20,7 @@ namespace sylar {
 
         using Task = std::shared_ptr<Fiber>;
         void schedule(Task task);
-        void schedule(Fiber::FiberFunc func, std::size_t num = 1);
+        void schedule(Fiber::FiberFunc const& func, std::size_t num = 1);
 
         static Scheduler* getCurrentScheduler() { return t_current_scheduler; }
         static Fiber* getCurrentSchedulerFiber() { return t_current_scheduler_fiber; }

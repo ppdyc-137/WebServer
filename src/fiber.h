@@ -22,7 +22,7 @@ namespace sylar {
         };
 
         constexpr static uint32_t DEFAULT_STACK_SIZE = 4 * 1024 * 1024;
-        explicit Fiber(FiberFunc func, uint32_t stack_size = DEFAULT_STACK_SIZE);
+        static std::shared_ptr<Fiber> newFiber(FiberFunc func, uint32_t stack_size = DEFAULT_STACK_SIZE);
         ~Fiber();
 
         void swapIn();
@@ -36,6 +36,7 @@ namespace sylar {
         static uint64_t getCurrentFiberId();
 
     private:
+        Fiber(FiberFunc func, uint32_t stack_size);
         Fiber(); // main fiber in new thread
         static std::shared_ptr<Fiber> newMainFiber();
 
