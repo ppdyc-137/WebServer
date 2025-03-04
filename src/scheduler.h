@@ -11,12 +11,11 @@ namespace sylar {
 
     class Scheduler {
     public:
-
         explicit Scheduler(std::size_t num, std::string name = "UNKNOWN");
-        ~Scheduler();
+        virtual ~Scheduler();
 
         void start();
-        void stop();
+        virtual void stop();
 
         using Task = std::shared_ptr<Fiber>;
         void schedule(Task task);
@@ -26,16 +25,21 @@ namespace sylar {
         static Fiber* getCurrentSchedulerFiber() { return t_current_scheduler_fiber; }
 
     private:
-        void run();
+        void run(std::size_t id);
+        virtual void idle();
+        virtual void tickle();
+        void schedule(Task task, bool tick);
 
         std::mutex mutex_;
         std::condition_variable_any cond_;
-        std::stop_source stop_source_;
 
         std::vector<Thread> threads_;
         std::queue<Task> tasks_;
-        std::string name_;
 
+    protected:
+        std::stop_source stop_source_;
+
+        std::string name_;
         std::size_t num_of_threads_;
 
         std::atomic<size_t> active_threads_;

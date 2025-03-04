@@ -7,9 +7,8 @@
 #include <thread>
 
 void foo() {
-    std::size_t i{};
-    while (true) {
-        spdlog::info("hello {}", i++);
+    for (int i = 0; i < 5; i++) {
+        spdlog::info("hello {}", i);
         sylar::Fiber::yield();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
@@ -18,7 +17,9 @@ void foo() {
 int main() {
     spdlog::set_level(spdlog::level::debug);
 
-    sylar::Scheduler scheduler(2, "Scheduler");
+    sylar::Scheduler scheduler(4, "Scheduler");
     scheduler.start();
+    scheduler.schedule(foo, 2);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     scheduler.schedule(foo, 2);
 }

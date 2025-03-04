@@ -15,7 +15,7 @@ namespace sylar {
 
         SYLAR_ASSERT2(getcontext(&context_) != -1, std::strerror(errno));
         ++g_fiber_count;
-        spdlog::debug("Fiber::Fiber: main fiber, id:{}", id_);
+        // spdlog::debug("Fiber::Fiber: main fiber, id:{}", id_);
     }
 
     std::shared_ptr<Fiber> Fiber::newMainFiber() { return std::shared_ptr<Fiber>{new Fiber()}; }
@@ -35,12 +35,12 @@ namespace sylar {
         makecontext(&context_, &Fiber::run, 0);
 
         ++g_fiber_count;
-        spdlog::debug("Fiber::Fiber: new fiber, id:{}", id_);
+        // spdlog::debug("Fiber::Fiber: new fiber, id:{}", id_);
     }
 
     Fiber::~Fiber() {
         --g_fiber_count;
-        spdlog::debug("Fiber::~Fiber: id:{}", id_);
+        // spdlog::debug("Fiber::~Fiber: id:{}", id_);
 
         if (stack_) {
             SYLAR_ASSERT(state_ == INIT || state_ == TERM || state_ == EXCEPT);

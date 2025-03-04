@@ -27,7 +27,7 @@ namespace sylar {
         }
         SYLAR_ASSERT(threads_.empty());
         for (std::size_t i = 0; i < num_of_threads_; i++) {
-            auto thread = Thread([this]() { run(); }, std::format("{}_{}", name_, i));
+            auto thread = Thread([this, i]() { run(i); }, std::format("{}_{}", name_, i));
             thread.start();
             threads_.emplace_back(std::move(thread));
         }
@@ -45,56 +45,101 @@ namespace sylar {
         }
     }
 
-    void Scheduler::run() {
-        spdlog::debug("{} run", name_);
+    void Scheduler::run(std::size_t id) {
+        // spdlog::debug("{}_{} run", name_, id);
         t_current_scheduler = this;
         t_current_scheduler_fiber = Fiber::getCurrentFiber().get();
 
         Task task{};
-        auto stop_token = stop_source_.get_token();
+        auto idle_fiber = Fiber::newFiber([this]() { idle(); });
 
         while (true) {
             Task task{};
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                if (!cond_.wait(lock, stop_token, [this]() { return !tasks_.empty(); })) {
-                    spdlog::debug("{} stop", name_);
+                if (!tasks_.empty()) {
+                    task = std::move(tasks_.front());
+                    tasks_.pop();
+                    active_threads_++;
+                }
+            }
+            if (task) {
+                // spdlog::debug("{}_{} run FiberID: {}", name_, id, task->getId());
+                auto state = task->getState();
+                SYLAR_ASSERT(state == Fiber::INIT || state == Fiber::READY || state == Fiber::HOLD);
+
+                task->swapIn();
+                active_threads_--;
+                state = task->getState();
+                if (state == Fiber::READY || state == Fiber::HOLD) {
+                    schedule(std::move(task), false);
+                }
+            } else {
+                spdlog::debug("{}_{} idle", name_, id);
+                idle_threads_++;
+                idle_fiber->swapIn();
+                idle_threads_--;
+                if (idle_fiber->getState() == Fiber::TERM) {
+                    spdlog::debug("{}_{} stop", name_, id);
                     return;
                 }
-
-                task = std::move(tasks_.front());
-                tasks_.pop();
-                active_threads_++;
-            }
-            SYLAR_ASSERT(task);
-
-            auto state = task->getState();
-            SYLAR_ASSERT(state == Fiber::INIT || state == Fiber::READY || state == Fiber::HOLD);
-
-            task->swapIn();
-            active_threads_--;
-            state = task->getState();
-            if (state == Fiber::READY || state == Fiber::HOLD) {
-                schedule(std::move(task));
+                spdlog::debug("{}_{} resume", name_, id);
             }
         }
     }
 
-    void Scheduler::schedule(Task task) {
+    void Scheduler::schedule(Task task, bool tick) {
+        // spdlog::debug("schedule FiberID: {}", task->getId());
         {
             std::scoped_lock<std::mutex> lock(mutex_);
             tasks_.push(std::move(task));
         }
-        cond_.notify_all();
+        if (tick) {
+            tickle();
+        }
     }
-    void Scheduler::schedule(Fiber::FiberFunc const& func, std::size_t num) {
+
+    void Scheduler::schedule(Task task) {
+        // spdlog::debug("schedule FiberID: {}", task->getId());
+        bool need_tickle = false;
         {
             std::scoped_lock<std::mutex> lock(mutex_);
+            need_tickle = tasks_.empty();
+            tasks_.push(std::move(task));
+        }
+        if (need_tickle) {
+            tickle();
+        }
+    }
+    void Scheduler::schedule(Fiber::FiberFunc const& func, std::size_t num) {
+        bool need_tickle = false;
+        {
+            std::scoped_lock<std::mutex> lock(mutex_);
+            need_tickle = tasks_.empty();
             for (std::size_t i = 0; i < num; i++) {
-                tasks_.push(Fiber::newFiber(func));
+                auto task = Fiber::newFiber(func);
+                // spdlog::debug("schedule FiberID: {}", task->getId());
+                tasks_.push(std::move(task));
             }
         }
-        cond_.notify_all();
+        if (need_tickle) {
+            tickle();
+        }
     }
+
+    void Scheduler::idle() {
+        auto stop_token = stop_source_.get_token();
+        while (true) {
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                if (!cond_.wait(lock, stop_token, [this]() { return !tasks_.empty(); })) {
+                    return;
+                }
+            }
+            Fiber::yield();
+        }
+    }
+
+    void Scheduler::tickle() { cond_.notify_all(); }
 
 } // namespace sylar
