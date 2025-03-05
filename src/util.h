@@ -8,6 +8,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <sys/epoll.h>
 #include <vector>
 
 namespace sylar {
@@ -54,6 +55,34 @@ namespace sylar {
         return ret;
     }
 
+    inline static std::string strevent(uint32_t events) {
+        std::stringstream ss;
+        if (events & EPOLLIN) {
+            ss << "EPOLLIN ";
+        }
+        if (events & EPOLLOUT) {
+            ss << "EPOLLOUT ";
+        }
+        if (events & EPOLLERR) {
+            ss << "EPOLLERR ";
+        }
+        if (events & EPOLLHUP) {
+            ss << "EPOLLHUP ";
+        }
+        if (events & EPOLLRDHUP) {
+            ss << "EPOLLRDHUP ";
+        }
+        if (events & EPOLLPRI) {
+            ss << "EPOLLPRI ";
+        }
+        if (events & EPOLLET) {
+            ss << "EPOLLET ";
+        }
+        if (events & EPOLLONESHOT) {
+            ss << "EPOLLONESHOT ";
+        }
+        return ss.str();
+    }
 } // namespace sylar
 
 #define SYLAR_ASSERT(x)                                                                                                \

@@ -5,6 +5,7 @@ add_library(sylar SHARED
     fiber.cpp
     log.cpp
     scheduler.cpp
+    iomanager.cpp
 )
 
 target_link_libraries(sylar PRIVATE

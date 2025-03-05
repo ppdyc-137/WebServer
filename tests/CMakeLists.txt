@@ -14,3 +14,6 @@ target_link_libraries(test_fiber PRIVATE sylar spdlog::spdlog )
 
 add_executable(test_scheduler test_scheduler.cpp)
 target_link_libraries(test_scheduler PRIVATE sylar spdlog::spdlog )
+
+add_executable(test_iomanager test_iomanager.cpp)
+target_link_libraries(test_iomanager PRIVATE sylar spdlog::spdlog )
