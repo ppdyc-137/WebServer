@@ -26,8 +26,8 @@ namespace sylar {
         ~Fiber();
 
         void swapIn();
-        void swapOut(State state = HOLD);
-        static void yield(State state = HOLD);
+        void swapOut(State state = READY);
+        static void yield(State state = READY);
 
         uint64_t getId() const { return id_; }
         State getState() const { return state_; }

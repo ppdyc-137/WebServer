@@ -64,18 +64,21 @@ namespace sylar {
                 }
             }
             if (task) {
-                // spdlog::debug("{}_{} run FiberID: {}", name_, id, task->getId());
+                spdlog::debug("{}_{} run FiberID: {}", name_, id, task->getId());
                 auto state = task->getState();
+                if (state == Fiber::EXEC) {
+                    continue;
+                }
                 SYLAR_ASSERT(state == Fiber::INIT || state == Fiber::READY || state == Fiber::HOLD);
 
                 task->swapIn();
                 active_threads_--;
                 state = task->getState();
-                if (state == Fiber::READY || state == Fiber::HOLD) {
+                if (state == Fiber::READY) {
                     schedule(std::move(task), false);
                 }
             } else {
-                spdlog::debug("{}_{} idle", name_, id);
+                // spdlog::debug("{}_{} idle", name_, id);
                 idle_threads_++;
                 idle_fiber->swapIn();
                 idle_threads_--;
@@ -83,7 +86,7 @@ namespace sylar {
                     spdlog::debug("{}_{} stop", name_, id);
                     return;
                 }
-                spdlog::debug("{}_{} resume", name_, id);
+                // spdlog::debug("{}_{} resume", name_, id);
             }
         }
     }
