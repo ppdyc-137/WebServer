@@ -156,7 +156,6 @@ namespace sylar {
         while (!stopable()) {
             int timeout = std::min(static_cast<int>(getNextTriggerTimeLast()), MAX_TIMEOUT);
             int num = epoll_wait(epfd_, ep_events.data(), MAX_EVENTS, timeout);
-            SYLAR_ASSERT2(num >= 0, strerror(errno));
             if (num < 0 && errno == EINTR) {
                 continue;
             }

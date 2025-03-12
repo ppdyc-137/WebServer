@@ -9,7 +9,7 @@ namespace sylar {
     bool Timer::Comparator::operator()(const std::shared_ptr<Timer>& lhs, const std::shared_ptr<Timer>& rhs) const {
         SYLAR_ASSERT(lhs && rhs);
 
-        return lhs->next_trigger_time_ < rhs->next_trigger_time_;
+        return lhs->next_trigger_time_ <= rhs->next_trigger_time_;
     }
 
     Timer::Timer(uint64_t period, std::function<void()> cb, bool recurring, TimerManager* manager)
@@ -105,7 +105,6 @@ namespace sylar {
         if (timers_.empty()) {
             return {};
         }
-
         auto now_timer = std::shared_ptr<Timer>(new Timer(0, nullptr, false, nullptr));
         auto it = timers_.upper_bound(now_timer);
         std::vector<std::shared_ptr<Timer>> expired_timers(timers_.begin(), it);
