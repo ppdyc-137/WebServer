@@ -3,6 +3,7 @@
 
 #include <arpa/inet.h>
 #include <chrono>
+#include <memory>
 #include <spdlog/common.h>
 #include <spdlog/spdlog.h>
 #include <sys/epoll.h>
@@ -27,15 +28,15 @@ void test_socket() {
     sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(8000);
-    inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr.s_addr);
+    addr.sin_port = htons(80);
+    inet_pton(AF_INET, "1.1.1.1", &addr.sin_addr.s_addr);
 
     auto read_cb = [sock]() {
-        char buf[256];
+        char buf[1024];
         while (true) {
             auto ret = read(sock, buf, sizeof(buf));
             if (ret > 0) {
-                spdlog::info("read {}", buf);
+                spdlog::info("read:\n{}", buf);
                 continue;
             }
             if (ret < 0 && errno != EAGAIN) {
@@ -52,6 +53,8 @@ void test_socket() {
         if (result == 0) {
             spdlog::info("connected");
             sylar::IOManager::getCurrentScheduler()->addEvent(sock, EPOLLIN, read_cb);
+            auto buf = "GET / HTTP/1.1\r\n\r\n";
+            write(sock, buf, strlen(buf) + 1);
         } else {
             spdlog::error("connect error: {}", std::strerror(result));
             close(sock);
@@ -69,47 +72,16 @@ void test_socket() {
     }
 }
 
-void test_timer() {
-    int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
-    if (timer_fd == -1) {
-        perror("timerfd_create");
-        return;
-    }
-
-    // Set timer to expire after 1 second, then every 1 second
-    struct itimerspec new_value;
-    new_value.it_value.tv_sec = 1;
-    new_value.it_value.tv_nsec = 0;
-    new_value.it_interval.tv_sec = 1;
-    new_value.it_interval.tv_nsec = 0;
-
-    if (timerfd_settime(timer_fd, 0, &new_value, NULL) == -1) {
-        perror("timerfd_settime");
-        close(timer_fd);
-        return;
-    }
-
-    static int count = 1;
-    auto callback = [timer_fd]() {
-        while (true) {
-            spdlog::info("tick {}", count++);
-            uint64_t expirations;
-            ssize_t s = read(timer_fd, &expirations, sizeof(expirations));
-            if (s != sizeof(expirations)) {
-                perror("read");
-                close(timer_fd);
-                return;
-            }
-            spdlog::info("Timer expired {} times", expirations);
-            if (count == 5) {
-                close(timer_fd);
-            } else {
-                sylar::IOManager::getCurrentScheduler()->addEvent(timer_fd, EPOLLIN);
-            }
-            sylar::Fiber::yield(sylar::Fiber::HOLD);
+void test_timer(uint64_t ms, int counts) {
+    static std::shared_ptr<sylar::Timer> timer;
+    auto callback = [ms, counts]() {
+        static int count = 1;
+        spdlog::info("tick {}/{} ({}ms)", count++, counts, ms);
+        if (count == counts + 1) {
+            timer->cancel();
         }
     };
-    sylar::IOManager::getCurrentScheduler()->addEvent(timer_fd, EPOLLIN, callback);
+    timer = sylar::IOManager::getCurrentScheduler()->addTimer(ms, callback, true);
 }
 
 int main() {
@@ -119,8 +91,8 @@ int main() {
     scheduler.start();
 
     scheduler.schedule(test_socket);
-    scheduler.schedule(test_timer);
-    scheduler.schedule(foo, 2);
+    // scheduler.schedule([]() {test_timer(1000, 5);});
+    // scheduler.schedule(foo, 3);
 
     // std::this_thread::sleep_for(std::chrono::seconds(100));
 }

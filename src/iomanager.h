@@ -2,6 +2,7 @@
 
 #include "mutex.h"
 #include "scheduler.h"
+#include "timer.h"
 #include "util.h"
 
 #include <atomic>
@@ -10,7 +11,7 @@
 #include <vector>
 
 namespace sylar {
-    class IOManager : public Scheduler {
+    class IOManager : public Scheduler, public TimerManager {
     public:
         using EventCallBackFunc = std::function<void()>;
 
@@ -70,11 +71,13 @@ namespace sylar {
             }
         };
 
+        bool stopable() { return stop_source_.stop_requested() && num_of_events_ == 0 && !hasTimer(); }
 
         void resize(std::size_t num);
         bool delEvent(int fd, EPOLL_EVENTS event, bool trigger);
 
         void tickle() override;
+        void timerInsertTickle() override { tickle(); }
         void idle() override;
 
         int epfd_{};

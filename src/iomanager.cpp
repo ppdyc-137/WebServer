@@ -2,6 +2,7 @@
 #include "mutex.h"
 #include "scheduler.h"
 #include "util.h"
+#include <algorithm>
 #include <fcntl.h>
 #include <memory>
 #include <spdlog/spdlog.h>
@@ -80,8 +81,7 @@ namespace sylar {
         event_context.scheduler_ = this;
         if (func) {
             event_context.func_ = std::move(func);
-        }
-        else {
+        } else {
             event_context.fiber_ = Fiber::getCurrentFiber();
         }
 
@@ -150,14 +150,20 @@ namespace sylar {
     }
 
     constexpr int MAX_EVENTS = 256;
-    constexpr int TIMEOUT = 3000;
+    constexpr int MAX_TIMEOUT = 3000;
     void IOManager::idle() {
         std::vector<epoll_event> ep_events(MAX_EVENTS);
-        while (!stop_source_.stop_requested() || num_of_events_ != 0) {
-            int num = epoll_wait(epfd_, ep_events.data(), MAX_EVENTS, TIMEOUT);
+        while (!stopable()) {
+            int timeout = std::min(static_cast<int>(getNextTriggerTimeLast()), MAX_TIMEOUT);
+            int num = epoll_wait(epfd_, ep_events.data(), MAX_EVENTS, timeout);
             SYLAR_ASSERT2(num >= 0, strerror(errno));
-            if (num == 0) {
+            if (num < 0 && errno == EINTR) {
                 continue;
+            }
+
+            auto cbs = getExpiredCallBacks();
+            for (auto& cb : cbs) {
+                schedule(cb);
             }
 
             for (std::size_t i = 0; i < static_cast<std::size_t>(num); i++) {
