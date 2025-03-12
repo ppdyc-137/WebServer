@@ -1,4 +1,5 @@
 #include "scheduler.h"
+#include "hook.h"
 #include "util.h"
 #include <format>
 #include <memory>
@@ -49,6 +50,7 @@ namespace sylar {
         // spdlog::debug("{}_{} run", name_, id);
         t_current_scheduler = this;
         t_current_scheduler_fiber = Fiber::getCurrentFiber().get();
+        setHookEnable(true);
 
         Task task{};
         auto idle_fiber = Fiber::newFiber([this]() { idle(); });

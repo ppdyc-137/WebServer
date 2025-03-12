@@ -8,6 +8,7 @@ add_library(sylar SHARED
     scheduler.cpp
     iomanager.cpp
     timer.cpp
+    hook.cpp
 )
 
 target_link_libraries(sylar PRIVATE
