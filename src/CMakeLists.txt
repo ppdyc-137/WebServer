@@ -10,6 +10,7 @@ add_library(sylar SHARED
     timer.cpp
     hook.cpp
     file_descriptor.cpp
+    address.cpp
 )
 
 target_link_libraries(sylar PRIVATE

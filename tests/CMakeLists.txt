@@ -20,3 +20,6 @@ target_link_libraries(test_iomanager PRIVATE sylar spdlog::spdlog )
 
 add_executable(test_hook test_hook.cpp)
 target_link_libraries(test_hook PRIVATE sylar spdlog::spdlog )
+
+add_executable(test_address test_address.cpp)
+target_link_libraries(test_address PRIVATE sylar spdlog::spdlog )
