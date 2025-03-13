@@ -38,8 +38,8 @@ namespace sylar {
         virtual ~TimerManager() = default;
 
         std::shared_ptr<Timer> addTimer(uint64_t ms, std::function<void()> cb, bool recurring);
-        std::shared_ptr<Timer> addCondtionTimer(uint64_t ms, std::function<void()> cb, std::weak_ptr<void> cond,
-                                                bool recurring);
+        std::shared_ptr<Timer> addConditionTimer(uint64_t ms, std::function<void()> cb, std::weak_ptr<void> cond,
+                                                 bool recurring);
 
         uint64_t getNextTriggerTimeLast();
         bool hasTimer();
@@ -52,4 +52,6 @@ namespace sylar {
         RWMutex mutex_;
         std::set<std::shared_ptr<Timer>, Timer::Comparator> timers_;
     };
+
+    constexpr uint64_t TIMEOUT_INFINITY = static_cast<uint64_t>(-1);
 } // namespace sylar

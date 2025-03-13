@@ -69,8 +69,8 @@ namespace sylar {
         return timer;
     }
 
-    std::shared_ptr<Timer> TimerManager::addCondtionTimer(uint64_t ms, std::function<void()> cb,
-                                                          std::weak_ptr<void> cond, bool recurring) {
+    std::shared_ptr<Timer> TimerManager::addConditionTimer(uint64_t ms, std::function<void()> cb,
+                                                           std::weak_ptr<void> cond, bool recurring) {
         return addTimer(
             ms,
             [cond = std::move(cond), cb = std::move(cb)]() {

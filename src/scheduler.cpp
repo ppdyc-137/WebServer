@@ -66,7 +66,7 @@ namespace sylar {
                 }
             }
             if (task) {
-                spdlog::debug("{}_{} run FiberID: {}", name_, id, task->getId());
+                // spdlog::debug("{}_{} run FiberID: {}", name_, id, task->getId());
                 auto state = task->getState();
                 if (state == Fiber::EXEC) {
                     continue;

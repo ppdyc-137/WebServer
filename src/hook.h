@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <dlfcn.h>
 #include <functional>
 #include <sys/socket.h>
@@ -25,10 +26,11 @@ inline auto sleep_f = OriginalFunction<sleep_func>("sleep");
 using socket_func = int(int, int, int);
 inline auto socket_f = OriginalFunction<socket_func>("socket");
 
-using connect_func = int(int, const struct socketaddr*, socklen_t);
+using connect_func = int(int, const struct sockaddr*, socklen_t);
 inline auto connect_f = OriginalFunction<connect_func>("connect");
+int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen, uint64_t timeout);
 
-using accept_func = int(int, struct socketaddr*, socklen_t*);
+using accept_func = int(int, struct sockaddr*, socklen_t*);
 inline auto accept_f = OriginalFunction<accept_func>("accept");
 
 using read_func = ssize_t(int, void*, size_t);
@@ -40,7 +42,7 @@ inline auto readv_f = OriginalFunction<readv_func>("readv");
 using recv_func = ssize_t(int, void*, size_t, int);
 inline auto recv_f = OriginalFunction<recv_func>("recv");
 
-using recvfrom_func = ssize_t(int, void*, size_t, int, struct socketaddr*, socklen_t*);
+using recvfrom_func = ssize_t(int, void*, size_t, int, struct sockaddr*, socklen_t*);
 inline auto recvfrom_f = OriginalFunction<recvfrom_func>("recvfrom");
 
 using recvmsg_func = ssize_t(int, struct msghdr*, int);
@@ -55,7 +57,7 @@ inline auto writev_f = OriginalFunction<writev_func>("writev");
 using send_func = ssize_t(int, const void*, size_t, int);
 inline auto send_f = OriginalFunction<send_func>("send");
 
-using sendto_func = ssize_t(int, const void*, size_t, int, const struct socketaddr*, socklen_t);
+using sendto_func = ssize_t(int, const void*, size_t, int, const struct sockaddr*, socklen_t);
 inline auto sendto_f = OriginalFunction<sendto_func>("sendto");
 
 using sendmsg_func = ssize_t(int, const struct msghdr*, int);

@@ -129,6 +129,43 @@ namespace sylar {
         return true;
     }
 
+    bool IOManager::cancelAll(int fd) {
+        std::shared_ptr<FDContext> fd_ctx{};
+        {
+            mutex_.readLock();
+            if (fd_contexts_.size() < static_cast<std::size_t>(fd)) {
+                mutex_.unlock();
+                return false;
+            }
+            fd_ctx = fd_contexts_[static_cast<std::size_t>(fd)];
+            mutex_.unlock();
+        }
+        LockGuard lock(fd_ctx->mutex_);
+
+        if (!fd_ctx->events_) {
+            return true;
+        }
+
+        epoll_event ep_event{};
+        ep_event.data.ptr = fd_ctx.get();
+        auto ret = epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, &ep_event);
+        if (ret < 0) {
+            spdlog::error("IOManager::delEvent: epoll_ctl {}", strerror(errno));
+            return false;
+        }
+
+        if (fd_ctx->events_ & EPOLLIN) {
+            fd_ctx->triggerContext(EPOLLIN);
+            num_of_events_--;
+        }
+        if (fd_ctx->events_ & EPOLLOUT) {
+            fd_ctx->triggerContext(EPOLLOUT);
+            num_of_events_--;
+        }
+        fd_ctx->events_ = 0;
+        return true;
+    }
+
     void IOManager::resize(std::size_t num) {
         fd_contexts_.resize(num);
 

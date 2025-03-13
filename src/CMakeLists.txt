@@ -9,6 +9,7 @@ add_library(sylar SHARED
     iomanager.cpp
     timer.cpp
     hook.cpp
+    file_descriptor.cpp
 )
 
 target_link_libraries(sylar PRIVATE

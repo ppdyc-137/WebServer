@@ -30,6 +30,7 @@ portability-*,
 -readability-identifier-length,
 -readability-implicit-bool-conversion,
 -readability-function-cognitive-complexity,
+-readability-inconsistent-declaration-parameter-name,
 -cert-dcl03-c,
 -cert-err58-cpp,
 '

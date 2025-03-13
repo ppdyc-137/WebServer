@@ -22,7 +22,8 @@ namespace sylar {
 
         bool addEvent(int fd, EPOLL_EVENTS event, EventCallBackFunc func = nullptr);
         bool delEvent(int fd, EPOLL_EVENTS event) { return delEvent(fd, event, false); }
-        bool triggerAndDelEvent(int fd, EPOLL_EVENTS event) { return delEvent(fd, event, true); }
+        bool cancelEvent(int fd, EPOLL_EVENTS event) { return delEvent(fd, event, true); }
+        bool cancelAll(int fd);
 
         static IOManager* getCurrentScheduler() { return dynamic_cast<IOManager*>(t_current_scheduler); }
 
