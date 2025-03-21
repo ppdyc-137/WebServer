@@ -11,6 +11,7 @@ add_library(sylar SHARED
     hook.cpp
     file_descriptor.cpp
     address.cpp
+    socket.cpp
 )
 
 target_link_libraries(sylar PRIVATE

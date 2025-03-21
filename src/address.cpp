@@ -36,7 +36,7 @@ namespace {
 } // namespace
 
 namespace sylar {
-    std::shared_ptr<Address> Address::newAddress(const sockaddr* addr, socklen_t len) {
+    std::shared_ptr<Address> Address::newAddress(const sockaddr* addr, socklen_t) {
         if (addr == nullptr) {
             return nullptr;
         }
@@ -47,7 +47,8 @@ namespace sylar {
         case AF_INET6:
             return std::make_shared<IPV6Address>(*reinterpret_cast<const sockaddr_in6*>(addr));
         default:
-            return std::make_shared<UnknownAddress>(addr, len);
+            return nullptr;
+            // return std::make_shared<UnknownAddress>(addr, len);
         }
     }
 

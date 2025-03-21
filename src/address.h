@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <netinet/in.h>
 #include <string>
@@ -16,12 +17,15 @@ namespace sylar {
         virtual const sockaddr* getAddr() const = 0;
         virtual socklen_t getAddrLen() const = 0;
         virtual sa_family_t getFamily() const = 0;
+        virtual std::string toString() const = 0;
     };
 
     class IPAddress : public Address {
     public:
         virtual std::string getIP() const = 0;
         virtual uint16_t getPort() const = 0;
+
+        std::string toString() const override { return std::format("{}:{}", getIP(), getPort()); }
     };
 
     class IPV4Address : public IPAddress {
