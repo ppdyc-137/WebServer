@@ -6,6 +6,8 @@
 #include <mutex>
 #include <spdlog/spdlog.h>
 
+constexpr size_t MAX_FREE_TASKS = 128;
+
 namespace sylar {
     Scheduler::Scheduler(std::size_t num, std::string name) : name_(std::move(name)), num_of_threads_(num) {
         SYLAR_ASSERT(num > 0);
@@ -49,6 +51,7 @@ namespace sylar {
         }
     }
 
+    thread_local static int tasks_finished{};
     void Scheduler::run(std::size_t id) {
         // spdlog::debug("{}_{} run", name_, id);
         t_current_scheduler = this;
@@ -65,7 +68,6 @@ namespace sylar {
                 if (!tasks_.empty()) {
                     task = std::move(tasks_.front());
                     tasks_.pop();
-                    active_threads_++;
                 }
             }
             if (task) {
@@ -74,13 +76,15 @@ namespace sylar {
                 if (state == Fiber::EXEC) {
                     continue;
                 }
-                SYLAR_ASSERT(state == Fiber::INIT || state == Fiber::READY || state == Fiber::HOLD);
+                SYLAR_ASSERT2(state == Fiber::INIT || state == Fiber::READY || state == Fiber::HOLD, static_cast<uint32_t>(state));
 
+                active_threads_++;
                 task->swapIn();
                 active_threads_--;
+                tasks_finished++;
                 state = task->getState();
                 if (state == Fiber::READY) {
-                    schedule(std::move(task), false);
+                    schedule(std::move(task));
                 } else if (state == Fiber::TERM || state == Fiber::EXCEPT) {
                     std::unique_lock<std::mutex> lock(mutex_);
                     free_tasks_.push(std::move(task));
@@ -91,7 +95,7 @@ namespace sylar {
                 idle_fiber->swapIn();
                 idle_threads_--;
                 if (idle_fiber->getState() == Fiber::TERM) {
-                    spdlog::debug("{}_{} stop", name_, id);
+                    spdlog::debug("{}_{} stop {} tasks finished", name_, id, tasks_finished);
                     return;
                 }
                 // spdlog::debug("{}_{} resume", name_, id);
@@ -112,21 +116,17 @@ namespace sylar {
 
     void Scheduler::schedule(Task task) {
         // spdlog::debug("schedule FiberID: {}", task->getId());
-        bool need_tickle = false;
         {
             std::scoped_lock<std::mutex> lock(mutex_);
-            need_tickle = tasks_.empty();
             tasks_.push(std::move(task));
         }
-        if (need_tickle) {
+        if (idle_threads_.load() != 0) {
             tickle();
         }
     }
     void Scheduler::schedule(Fiber::FiberFunc const& func, std::size_t num) {
-        bool need_tickle = false;
         {
             std::scoped_lock<std::mutex> lock(mutex_);
-            need_tickle = tasks_.empty();
             for (std::size_t i = 0; i < num; i++) {
                 Task task;
                 if (!free_tasks_.empty()) {
@@ -140,7 +140,7 @@ namespace sylar {
                 tasks_.push(std::move(task));
             }
         }
-        if (need_tickle) {
+        if (idle_threads_.load() != 0) {
             tickle();
         }
     }

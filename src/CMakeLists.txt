@@ -10,8 +10,9 @@ add_library(sylar SHARED
     timer.cpp
     hook.cpp
     file_descriptor.cpp
-    address.cpp
-    socket.cpp
+    net/address.cpp
+    net/socket.cpp
+    net/http.cpp
 )
 
 target_link_libraries(sylar PRIVATE
@@ -23,4 +24,5 @@ target_link_libraries(sylar PUBLIC
     yaml-cpp::yaml-cpp
 )
 
+target_include_directories(sylar PUBLIC .)
 

@@ -84,7 +84,7 @@ namespace sylar {
     uint64_t TimerManager::getNextTriggerTimeLast() {
         ReadLockGuard lock(mutex_);
         if (timers_.empty()) {
-            return ~0ULL;
+            return TIMEOUT_INFINITY;
         }
 
         const auto& timer = *timers_.begin();

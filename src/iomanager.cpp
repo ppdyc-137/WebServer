@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 namespace sylar {
-    constexpr std::size_t DEFAULT_CONTEXT_SIZE = 32;
     IOManager::IOManager(std::size_t num, std::string name) : Scheduler(num, std::move(name)), epfd_(epoll_create(1)) {
         SYLAR_ASSERT2(epfd_ >= 0, std::strerror(errno));
 
@@ -26,8 +25,6 @@ namespace sylar {
 
         ret = epoll_ctl(epfd_, EPOLL_CTL_ADD, ticklefd_[0], &event);
         SYLAR_ASSERT2(ret >= 0, std::strerror(errno));
-
-        resize(DEFAULT_CONTEXT_SIZE);
     }
 
     IOManager::~IOManager() {
@@ -47,27 +44,19 @@ namespace sylar {
 
     bool IOManager::addEvent(int fd, EPOLL_EVENTS event, EventCallBackFunc func) {
         SYLAR_ASSERT(event == EPOLLIN || event == EPOLLOUT);
-        std::shared_ptr<FDContext> fd_ctx{};
+        FDEventContext* fd_ctx{};
         {
-            mutex_.readLock();
-            if (fd_contexts_.size() > static_cast<std::size_t>(fd)) {
-                mutex_.unlock();
-                fd_ctx = fd_contexts_[static_cast<std::size_t>(fd)];
-            } else {
-                mutex_.unlock();
-                WriteLockGuard lock(mutex_);
-                resize(static_cast<std::size_t>(fd) * 2);
-                fd_ctx = fd_contexts_[static_cast<std::size_t>(fd)];
-            }
+            LockGuard lock(mutex_);
+            fd_ctx = getFDEventContext(fd);
         }
         LockGuard lock(fd_ctx->mutex_);
 
-        SYLAR_ASSERT(!(fd_ctx->events_ & event));
+        SYLAR_ASSERT2(!(fd_ctx->events_ & event), "already have event");
 
         auto op = (fd_ctx->events_ != 0) ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
         epoll_event ep_event{};
         ep_event.events = event | fd_ctx->events_ | EPOLLET;
-        ep_event.data.ptr = fd_ctx.get();
+        ep_event.data.ptr = fd_ctx;
 
         auto ret = epoll_ctl(epfd_, op, fd, &ep_event);
         if (ret < 0) {
@@ -91,15 +80,10 @@ namespace sylar {
 
     bool IOManager::delEvent(int fd, EPOLL_EVENTS event, bool trigger) {
         SYLAR_ASSERT(event == EPOLLIN || event == EPOLLOUT);
-        std::shared_ptr<FDContext> fd_ctx{};
+        FDEventContext* fd_ctx{};
         {
-            mutex_.readLock();
-            if (fd_contexts_.size() < static_cast<std::size_t>(fd)) {
-                mutex_.unlock();
-                return false;
-            }
-            fd_ctx = fd_contexts_[static_cast<std::size_t>(fd)];
-            mutex_.unlock();
+            LockGuard lock(mutex_);
+            fd_ctx = getFDEventContext(fd);
         }
         LockGuard lock(fd_ctx->mutex_);
 
@@ -111,7 +95,7 @@ namespace sylar {
         auto op = (new_event != 0) ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
         epoll_event ep_event{};
         ep_event.events = new_event | EPOLLET;
-        ep_event.data.ptr = fd_ctx.get();
+        ep_event.data.ptr = fd_ctx;
         auto ret = epoll_ctl(epfd_, op, fd, &ep_event);
         if (ret < 0) {
             spdlog::error("IOManager::delEvent: epoll_ctl {}", strerror(errno));
@@ -125,20 +109,18 @@ namespace sylar {
             fd_ctx->resetContext(event);
         }
 
+        if (op == EPOLL_CTL_DEL) {
+            fd_contexts_.erase(fd);
+        }
         num_of_events_--;
         return true;
     }
 
     bool IOManager::cancelAll(int fd) {
-        std::shared_ptr<FDContext> fd_ctx{};
+        FDEventContext* fd_ctx{};
         {
-            mutex_.readLock();
-            if (fd_contexts_.size() < static_cast<std::size_t>(fd)) {
-                mutex_.unlock();
-                return false;
-            }
-            fd_ctx = fd_contexts_[static_cast<std::size_t>(fd)];
-            mutex_.unlock();
+            LockGuard lock(mutex_);
+            fd_ctx = getFDEventContext(fd);
         }
         LockGuard lock(fd_ctx->mutex_);
 
@@ -147,10 +129,10 @@ namespace sylar {
         }
 
         epoll_event ep_event{};
-        ep_event.data.ptr = fd_ctx.get();
+        ep_event.data.ptr = fd_ctx;
         auto ret = epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, &ep_event);
         if (ret < 0) {
-            spdlog::error("IOManager::delEvent: epoll_ctl {}", strerror(errno));
+            spdlog::error("IOManager::cancelAll: epoll_ctl {}", strerror(errno));
             return false;
         }
 
@@ -162,19 +144,9 @@ namespace sylar {
             fd_ctx->triggerContext(EPOLLOUT);
             num_of_events_--;
         }
-        fd_ctx->events_ = 0;
+
+        fd_contexts_.erase(fd);
         return true;
-    }
-
-    void IOManager::resize(std::size_t num) {
-        fd_contexts_.resize(num);
-
-        for (std::size_t i = 0; i < fd_contexts_.size(); i++) {
-            if (fd_contexts_[i] == nullptr) {
-                fd_contexts_[i] = std::make_shared<FDContext>();
-                fd_contexts_[i]->fd_ = static_cast<int>(i);
-            }
-        }
     }
 
     void IOManager::tickle() {
@@ -187,11 +159,11 @@ namespace sylar {
     }
 
     constexpr int MAX_EVENTS = 256;
-    constexpr int MAX_TIMEOUT = 3000;
+    constexpr uint64_t MAX_TIMEOUT = 3000;
     void IOManager::idle() {
         std::vector<epoll_event> ep_events(MAX_EVENTS);
         while (!stopable()) {
-            int timeout = std::min(static_cast<int>(getNextTriggerTimeLast()), MAX_TIMEOUT);
+            int timeout = static_cast<int>(std::min(getNextTriggerTimeLast(), MAX_TIMEOUT));
             int num = epoll_wait(epfd_, ep_events.data(), MAX_EVENTS, timeout);
             if (num < 0 && errno == EINTR) {
                 continue;
@@ -211,9 +183,9 @@ namespace sylar {
                     }
                     continue;
                 }
-                auto* fd_ctx = static_cast<FDContext*>(ep_event.data.ptr);
+                auto* fd_ctx = static_cast<FDEventContext*>(ep_event.data.ptr);
                 LockGuard lock(fd_ctx->mutex_);
-                spdlog::debug("epoll_wait: fd: {}, event: {}", fd_ctx->fd_, strevent(ep_event.events));
+                // spdlog::debug("epoll_wait: fd: {}, event: {}", fd_ctx->fd_, strevent(ep_event.events));
 
                 if (ep_event.events & (EPOLLERR | EPOLLHUP)) {
                     ep_event.events |= (EPOLLIN | EPOLLOUT) & fd_ctx->events_;

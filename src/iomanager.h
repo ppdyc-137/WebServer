@@ -7,8 +7,8 @@
 
 #include <atomic>
 #include <functional>
+#include <spdlog/spdlog.h>
 #include <sys/epoll.h>
-#include <vector>
 
 namespace sylar {
     class IOManager : public Scheduler, public TimerManager {
@@ -28,7 +28,7 @@ namespace sylar {
         static IOManager* getCurrentScheduler() { return dynamic_cast<IOManager*>(t_current_scheduler); }
 
     private:
-        struct FDContext {
+        struct FDEventContext {
             struct EventContext {
                 Scheduler* scheduler_;
                 std::shared_ptr<Fiber> fiber_;
@@ -72,10 +72,39 @@ namespace sylar {
             }
         };
 
-        bool stopable() { return stop_source_.stop_requested() && num_of_events_ == 0 && !hasTimer(); }
+        bool stopable() {
+            auto res =  num_of_events_ == 0 && !hasTimer() && numOfTasks() == 0 && active_threads_ == 0 && stop_source_.stop_requested();
+            return res;
+            // if (num_of_events_ != 0) {
+            //     spdlog::debug("cannot not stop because num_of_events_({}) != 0", num_of_events_.load());
+            //     return false;
+            // }
+            // if (hasTimer()) {
+            //     spdlog::debug("cannot not stop because has timer");
+            //     return false;
+            // }
+            // if (numOfTasks() != 0) {
+            //     spdlog::debug("cannot not stop because numOfTasks({}) != 0", numOfTasks());
+            //     return false;
+            // }
+            // if (active_threads_ != 0) {
+            //     spdlog::debug("cannot not stop because active_threads({}, {}) != 0", active_threads_.load(), idle_threads_.load());
+            //     return false;
+            // }
+            // if (!stop_source_.stop_requested()) {
+            //     spdlog::debug("cannot not stop because !stop_source.stop_requested()");
+            //     return false;
+            // }
+            // return true;
+        }
 
-        void resize(std::size_t num);
         bool delEvent(int fd, EPOLL_EVENTS event, bool trigger);
+        FDEventContext* getFDEventContext(int fd) {
+            if (!fd_contexts_.contains(fd)) {
+                fd_contexts_[fd].fd_ = fd;
+            }
+            return &fd_contexts_[fd];
+        }
 
         void tickle() override;
         void timerInsertTickle() override { tickle(); }
@@ -83,9 +112,9 @@ namespace sylar {
 
         int epfd_{};
         int ticklefd_[2]{};
-        std::vector<std::shared_ptr<FDContext>> fd_contexts_;
+        std::unordered_map<int , FDEventContext> fd_contexts_;
         std::atomic<std::size_t> num_of_events_;
-        RWMutex mutex_;
+        Mutex mutex_;
     };
 
 } // namespace sylar

@@ -24,6 +24,11 @@ namespace sylar {
         static Scheduler* getCurrentScheduler() { return t_current_scheduler; }
         static Fiber* getCurrentSchedulerFiber() { return t_current_scheduler_fiber; }
 
+        size_t numOfTasks() {
+            std::scoped_lock<std::mutex> lock(mutex_);
+            return tasks_.size();
+        }
+
     private:
         void run(std::size_t id);
         virtual void idle();
