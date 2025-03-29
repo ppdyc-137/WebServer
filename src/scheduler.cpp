@@ -10,6 +10,9 @@ namespace sylar {
     Scheduler::Scheduler(std::size_t num, std::string name) : name_(std::move(name)), num_of_threads_(num) {
         SYLAR_ASSERT(num > 0);
         threads_.reserve(num);
+        for(size_t i = 0; i < num * 2; i++) {
+            free_tasks_.emplace(Fiber::newFiber());
+        }
     }
 
     Scheduler::~Scheduler() {
@@ -78,6 +81,9 @@ namespace sylar {
                 state = task->getState();
                 if (state == Fiber::READY) {
                     schedule(std::move(task), false);
+                } else if (state == Fiber::TERM || state == Fiber::EXCEPT) {
+                    std::unique_lock<std::mutex> lock(mutex_);
+                    free_tasks_.push(std::move(task));
                 }
             } else {
                 // spdlog::debug("{}_{} idle", name_, id);
@@ -122,7 +128,14 @@ namespace sylar {
             std::scoped_lock<std::mutex> lock(mutex_);
             need_tickle = tasks_.empty();
             for (std::size_t i = 0; i < num; i++) {
-                auto task = Fiber::newFiber(func);
+                Task task;
+                if (!free_tasks_.empty()) {
+                    task = std::move(free_tasks_.front());
+                    free_tasks_.pop();
+                    task->reset(func);
+                } else {
+                    task = Fiber::newFiber(func);
+                }
                 // spdlog::debug("schedule FiberID: {}", task->getId());
                 tasks_.push(std::move(task));
             }

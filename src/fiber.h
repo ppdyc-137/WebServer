@@ -21,13 +21,14 @@ namespace sylar {
             EXCEPT,
         };
 
-        constexpr static uint32_t DEFAULT_STACK_SIZE = 4 * 1024 * 1024;
-        static std::shared_ptr<Fiber> newFiber(FiberFunc func, uint32_t stack_size = DEFAULT_STACK_SIZE);
+        constexpr static uint32_t DEFAULT_STACK_SIZE = 1 * 1024 * 1024;
+        static std::shared_ptr<Fiber> newFiber(FiberFunc func = nullptr, uint32_t stack_size = DEFAULT_STACK_SIZE);
         ~Fiber();
 
         void swapIn();
         void swapOut(State state = READY);
         static void yield(State state = READY);
+        void reset(FiberFunc func);
 
         uint64_t getId() const { return id_; }
         State getState() const { return state_; }

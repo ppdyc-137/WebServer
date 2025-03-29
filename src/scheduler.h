@@ -35,6 +35,7 @@ namespace sylar {
 
         std::vector<Thread> threads_;
         std::queue<Task> tasks_;
+        std::queue<Task> free_tasks_;
 
     protected:
         std::stop_source stop_source_;

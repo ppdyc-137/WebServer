@@ -38,6 +38,19 @@ namespace sylar {
         // spdlog::debug("Fiber::Fiber: new fiber, id:{}", id_);
     }
 
+    void Fiber::reset(FiberFunc func) {
+        state_ = INIT;
+        func_ = std::move(func);
+        SYLAR_ASSERT2(getcontext(&context_) != -1, std::strerror(errno));
+
+        context_.uc_stack.ss_sp = stack_.get();
+        context_.uc_stack.ss_size = stack_size_;
+        context_.uc_link = nullptr;
+        makecontext(&context_, &Fiber::run, 0);
+
+        // spdlog::debug("Fiber::Fiber: reuse fiber, id:{}", id_);
+    }
+
     Fiber::~Fiber() {
         --g_fiber_count;
         // spdlog::debug("Fiber::~Fiber: id:{}", id_);
@@ -113,7 +126,6 @@ namespace sylar {
         }
         t_current_fiber = t_main_fiber.get();
         t_main_fiber->state_ = EXEC;
-        fiber.reset();
         SYLAR_ASSERT2(setcontext(&t_main_fiber->context_) != -1, std::strerror(errno));
         SYLAR_ASSERT2(false, std::format("fiber id: {} should not reach here", fiber->id_));
     }
