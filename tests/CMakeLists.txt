@@ -26,3 +26,6 @@ target_link_libraries(test_address PRIVATE sylar spdlog::spdlog )
 
 add_executable(test_socket test_socket.cpp)
 target_link_libraries(test_socket PRIVATE sylar spdlog::spdlog )
+
+add_executable(test_http test_http.cpp)
+target_link_libraries(test_http PRIVATE sylar spdlog::spdlog )

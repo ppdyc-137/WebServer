@@ -64,6 +64,7 @@ namespace sylar {
         int sock = ::accept(fd_, nullptr, nullptr);
         if (sock == -1) {
             spdlog::error("Socket {} accept error: {}", fd_, strerror(errno));
+            return {};
         }
         return std::shared_ptr<Socket>{new Socket(sock, family_, type_, protocol_)};
     }
