@@ -189,7 +189,7 @@ namespace sylar {
         bool closed_{true};
         bool websocket_{false};
         HttpStatus status_;
-        // std::string reason_;
+        std::string reason_;
         MapType headers_;
         std::vector<std::string> cookies_;
         std::string body_;

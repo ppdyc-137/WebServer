@@ -32,6 +32,7 @@ namespace sylar {
 
         uint64_t getId() const { return id_; }
         State getState() const { return state_; }
+        static uint64_t getFiberCreated()  { return g_fiber_id.load(); }
 
         static std::shared_ptr<Fiber> getCurrentFiber();
         static uint64_t getCurrentFiberId();

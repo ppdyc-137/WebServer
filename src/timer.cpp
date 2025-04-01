@@ -2,6 +2,7 @@
 #include "util.h"
 #include <functional>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <utility>
 
 namespace sylar {
@@ -109,6 +110,7 @@ namespace sylar {
         auto it = timers_.upper_bound(now_timer);
         std::vector<std::shared_ptr<Timer>> expired_timers(timers_.begin(), it);
         timers_.erase(timers_.begin(), it);
+        spdlog::debug("expired_timers: {}, total timers: {}", expired_timers.size(), timers_.size());
 
         std::vector<std::function<void()>> cbs;
         cbs.reserve(expired_timers.size());

@@ -25,6 +25,8 @@ namespace sylar {
         bool cancelEvent(int fd, EPOLL_EVENTS event) { return delEvent(fd, event, true); }
         bool cancelAll(int fd);
 
+        size_t getEventsCount() const { return num_of_events_.load(); }
+
         static IOManager* getCurrentScheduler() { return dynamic_cast<IOManager*>(t_current_scheduler); }
 
     private:
@@ -73,7 +75,8 @@ namespace sylar {
         };
 
         bool stopable() {
-            auto res =  num_of_events_ == 0 && !hasTimer() && numOfTasks() == 0 && active_threads_ == 0 && stop_source_.stop_requested();
+            auto res = num_of_events_ == 0 && !hasTimer() && getTaskCount() == 0 && active_threads_ == 0 &&
+                       stop_source_.stop_requested();
             return res;
             // if (num_of_events_ != 0) {
             //     spdlog::debug("cannot not stop because num_of_events_({}) != 0", num_of_events_.load());
@@ -88,8 +91,8 @@ namespace sylar {
             //     return false;
             // }
             // if (active_threads_ != 0) {
-            //     spdlog::debug("cannot not stop because active_threads({}, {}) != 0", active_threads_.load(), idle_threads_.load());
-            //     return false;
+            //     spdlog::debug("cannot not stop because active_threads({}, {}) != 0", active_threads_.load(),
+            //     idle_threads_.load()); return false;
             // }
             // if (!stop_source_.stop_requested()) {
             //     spdlog::debug("cannot not stop because !stop_source.stop_requested()");
@@ -112,7 +115,7 @@ namespace sylar {
 
         int epfd_{};
         int ticklefd_[2]{};
-        std::unordered_map<int , FDEventContext> fd_contexts_;
+        std::unordered_map<int, FDEventContext> fd_contexts_;
         std::atomic<std::size_t> num_of_events_;
         Mutex mutex_;
     };

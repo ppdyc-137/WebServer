@@ -68,6 +68,7 @@ namespace sylar {
                 if (!tasks_.empty()) {
                     task = std::move(tasks_.front());
                     tasks_.pop();
+                    active_threads_++;
                 }
             }
             if (task) {
@@ -78,7 +79,6 @@ namespace sylar {
                 }
                 SYLAR_ASSERT2(state == Fiber::INIT || state == Fiber::READY || state == Fiber::HOLD, static_cast<uint32_t>(state));
 
-                active_threads_++;
                 task->swapIn();
                 active_threads_--;
                 tasks_finished++;
@@ -100,17 +100,6 @@ namespace sylar {
                 }
                 // spdlog::debug("{}_{} resume", name_, id);
             }
-        }
-    }
-
-    void Scheduler::schedule(Task task, bool tick) {
-        // spdlog::debug("schedule FiberID: {}", task->getId());
-        {
-            std::scoped_lock<std::mutex> lock(mutex_);
-            tasks_.push(std::move(task));
-        }
-        if (tick) {
-            tickle();
         }
     }
 

@@ -2,6 +2,7 @@
 #include "file_descriptor.h"
 #include "iomanager.h"
 #include "scheduler.h"
+#include "timer.h"
 
 #include <cerrno>
 #include <fcntl.h>
@@ -66,8 +67,9 @@ int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen, uint64_t
         auto* scheduler = sylar::IOManager::getCurrentScheduler();
         auto timer_info = std::make_shared<TimerInfo>();
         auto timer_info_weak = std::weak_ptr(timer_info);
+        std::shared_ptr<sylar::Timer> timer;
         if (timeout != sylar::TIMEOUT_INFINITY) {
-            scheduler->addConditionTimer(
+            timer = scheduler->addConditionTimer(
                 timeout,
                 [scheduler, sockfd, timer_info_weak]() {
                     timer_info_weak.lock()->timed_out_ = true;
@@ -79,11 +81,17 @@ int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen, uint64_t
         auto ret = scheduler->addEvent(sockfd, EPOLLOUT);
         if (ret) {
             sylar::Fiber::yield(sylar::Fiber::HOLD);
+            if (timer) {
+                timer->cancel();
+            }
             if (timer_info->timed_out_) {
                 errno = ETIMEDOUT;
                 return -1;
             }
         } else {
+            if (timer) {
+                timer->cancel();
+            }
             spdlog::error("connect: addEvent({}, EPOLLOUT) error", sockfd);
         }
     }
@@ -139,8 +147,9 @@ namespace {
             auto* scheduler = sylar::IOManager::getCurrentScheduler();
             auto timer_info = std::make_shared<TimerInfo>();
             auto timer_info_weak = std::weak_ptr(timer_info);
+            std::shared_ptr<sylar::Timer> timer;
             if (timeout != sylar::TIMEOUT_INFINITY) {
-                scheduler->addConditionTimer(
+                timer = scheduler->addConditionTimer(
                     timeout,
                     [scheduler, fd, timer_info_weak, event]() {
                         timer_info_weak.lock()->timed_out_ = true;
@@ -152,11 +161,17 @@ namespace {
             bool success = scheduler->addEvent(fd, event);
             if (success) {
                 sylar::Fiber::yield(sylar::Fiber::HOLD);
+                if (timer) {
+                    timer->cancel();
+                }
                 if (timer_info->timed_out_) {
                     errno = ETIMEDOUT;
                     return -1;
                 }
             } else {
+                if (timer) {
+                    timer->cancel();
+                }
                 spdlog::error("{}: addEvent({}, {}) error", name, fd, sylar::strevent(event));
             }
         }
