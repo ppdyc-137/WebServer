@@ -1,60 +1,55 @@
 #pragma once
 
-#include <atomic>
+#include <boost/context/detail/fcontext.hpp>
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <sys/ucontext.h>
-#include <ucontext.h>
 
 namespace sylar {
 
-    class Fiber : public std::enable_shared_from_this<Fiber> {
+    class Fiber {
     public:
         using FiberFunc = std::function<void()>;
         enum State : uint8_t {
             INIT,
             READY,
-            HOLD,
             EXEC,
             TERM,
             EXCEPT,
         };
+        static constexpr const char* STATE_STR[] = {"INIT", "READY", "EXEC", "TERM", "EXCEPT"};
 
         constexpr static uint32_t DEFAULT_STACK_SIZE = 1 * 1024 * 1024;
-        static std::shared_ptr<Fiber> newFiber(FiberFunc func = nullptr, uint32_t stack_size = DEFAULT_STACK_SIZE);
+        static Fiber* newFiber(FiberFunc func = nullptr, uint32_t stack_size = DEFAULT_STACK_SIZE);
         ~Fiber();
 
-        void swapIn();
-        void swapOut(State state = READY);
-        static void yield(State state = READY);
-        void reset(FiberFunc func);
+        void resume() { swapIn(); }
+        static void yield();
 
-        uint64_t getId() const { return id_; }
-        State getState() const { return state_; }
-        static uint64_t getFiberCreated()  { return g_fiber_id.load(); }
+        static Fiber* getCurrentFiber() { return t_current_fiber; }
 
-        static std::shared_ptr<Fiber> getCurrentFiber();
-        static uint64_t getCurrentFiberId();
+        const char* getStateStr() { return STATE_STR[static_cast<uint32_t>(state_)]; };
+        State getState() { return state_; }
 
     private:
+        friend class Scheduler;
+        friend class IOManager;
         Fiber(FiberFunc func, uint32_t stack_size);
         Fiber(); // main fiber in new thread
-        static std::shared_ptr<Fiber> newMainFiber();
 
-        static void run();
+        static void run(boost::context::detail::transfer_t t);
+        void swapIn();
+        void swapOut();
+        void reset(FiberFunc func);
 
-        uint64_t id_;
         State state_{INIT};
         uint32_t stack_size_{};
 
         FiberFunc func_;
         std::unique_ptr<char[]> stack_;
-        ucontext_t context_{};
 
-        static inline std::atomic<uint64_t> g_fiber_id{};
-        static inline std::atomic<uint64_t> g_fiber_count{};
-        static inline thread_local std::shared_ptr<Fiber> t_main_fiber{newMainFiber()};
+        boost::context::detail::fcontext_t context_{};
+
         static inline thread_local Fiber* t_current_fiber{};
     };
 

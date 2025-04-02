@@ -28,6 +28,8 @@ namespace sylar {
     uint64_t getCurrentTimeMS();
 } // namespace sylar
 
+#ifndef NDEBUG
+
 #define SYLAR_ASSERT(x)                                                                                                \
     if (!(x)) {                                                                                                        \
         spdlog::error("ASSERTION: {}\nbacktrace:\n{}", #x, sylar::backTraceToString(100));                             \
@@ -39,3 +41,10 @@ namespace sylar {
         spdlog::error("ASSERTION: {}\n{}\nbacktrace:\n{}", #x, msg, sylar::backTraceToString(100, "    "));            \
         assert(x);                                                                                                     \
     }
+
+#else
+#define SYLAR_ASSERT(x)
+#define SYLAR_ASSERT2(x, msg)
+
+#endif
+

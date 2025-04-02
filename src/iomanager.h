@@ -1,123 +1,154 @@
 #pragma once
 
-#include "mutex.h"
-#include "scheduler.h"
-#include "timer.h"
+#include "fiber.h"
 #include "util.h"
 
-#include <atomic>
-#include <functional>
+#include <cstdint>
+#include <liburing.h>
+#include <queue>
 #include <spdlog/spdlog.h>
-#include <sys/epoll.h>
 
 namespace sylar {
-    class IOManager : public Scheduler, public TimerManager {
+    class IOManager {
     public:
-        using EventCallBackFunc = std::function<void()>;
+        using Func = std::function<void()>;
+        using Task = Fiber*;
 
-        explicit IOManager(std::size_t num, std::string name = "UNKNOWN");
-        ~IOManager() override;
+        IOManager();
+        ~IOManager();
 
-        void stop() override;
+        void execute();
+        void schedule(Func const& func) {
+            Task task = nullptr;
+            if (!free_tasks_.empty()) {
+                task = free_tasks_.front();
+                free_tasks_.pop();
+                task->reset(func);
+            } else {
+                task = Fiber::newFiber(func);
+            }
+            ready_tasks_.push(task);
+        }
 
-        bool addEvent(int fd, EPOLL_EVENTS event, EventCallBackFunc func = nullptr);
-        bool delEvent(int fd, EPOLL_EVENTS event) { return delEvent(fd, event, false); }
-        bool cancelEvent(int fd, EPOLL_EVENTS event) { return delEvent(fd, event, true); }
-        bool cancelAll(int fd);
-
-        size_t getEventsCount() const { return num_of_events_.load(); }
-
-        static IOManager* getCurrentScheduler() { return dynamic_cast<IOManager*>(t_current_scheduler); }
+        static IOManager* getCurrentScheduler() { return t_current_scheduler; }
+        static Fiber* getCurrentSchedulerFiber() { return &t_current_scheduler_fiber; }
+        uint64_t getPendingOps() { return pending_ops_; }
 
     private:
-        struct FDEventContext {
-            struct EventContext {
-                Scheduler* scheduler_;
-                std::shared_ptr<Fiber> fiber_;
-                EventCallBackFunc func_;
-            };
+        friend struct UringOp;
+        struct io_uring_sqe* getSqe();
 
-            int fd_;
-            uint32_t events_{};
-            EventContext read_;
-            EventContext write_;
-            Mutex mutex_;
+        void submit() { io_uring_submit(&uring_); }
 
-            EventContext& getContext(uint32_t event) {
-                if (event == EPOLLIN) {
-                    return read_;
-                }
-                if (event == EPOLLOUT) {
-                    return write_;
-                }
-                SYLAR_ASSERT(false);
-            }
+        static constexpr int RING_SIZE = 256;
+        io_uring uring_{};
 
-            void resetContext(uint32_t event) {
-                auto& context = getContext(event);
-                context.scheduler_ = nullptr;
-                context.fiber_.reset();
-                context.func_ = nullptr;
-            }
+        std::atomic<uint64_t> pending_ops_;
 
-            void triggerContext(uint32_t event) {
-                auto& context = getContext(event);
-                if (context.fiber_) {
-                    context.scheduler_->schedule(context.fiber_);
-                    context.fiber_ = nullptr;
-                }
-                if (context.func_) {
-                    context.scheduler_->schedule(context.func_);
-                    context.func_ = nullptr;
-                }
-                context.scheduler_ = nullptr;
-            }
-        };
+        std::queue<Task> ready_tasks_;
+        std::queue<Task> free_tasks_;
 
-        bool stopable() {
-            auto res = num_of_events_ == 0 && !hasTimer() && getTaskCount() == 0 && active_threads_ == 0 &&
-                       stop_source_.stop_requested();
-            return res;
-            // if (num_of_events_ != 0) {
-            //     spdlog::debug("cannot not stop because num_of_events_({}) != 0", num_of_events_.load());
-            //     return false;
-            // }
-            // if (hasTimer()) {
-            //     spdlog::debug("cannot not stop because has timer");
-            //     return false;
-            // }
-            // if (numOfTasks() != 0) {
-            //     spdlog::debug("cannot not stop because numOfTasks({}) != 0", numOfTasks());
-            //     return false;
-            // }
-            // if (active_threads_ != 0) {
-            //     spdlog::debug("cannot not stop because active_threads({}, {}) != 0", active_threads_.load(),
-            //     idle_threads_.load()); return false;
-            // }
-            // if (!stop_source_.stop_requested()) {
-            //     spdlog::debug("cannot not stop because !stop_source.stop_requested()");
-            //     return false;
-            // }
-            // return true;
+        static inline thread_local IOManager* t_current_scheduler{};
+        static inline thread_local Fiber t_current_scheduler_fiber{};
+    };
+
+    // NOLINTBEGIN
+    struct UringOp {
+        UringOp() : fiber_(Fiber::getCurrentFiber()) {
+            SYLAR_ASSERT(fiber_);
+            sqe_ = IOManager::getCurrentScheduler()->getSqe();
+            io_uring_sqe_set_data(sqe_, this);
         }
 
-        bool delEvent(int fd, EPOLL_EVENTS event, bool trigger);
-        FDEventContext* getFDEventContext(int fd) {
-            if (!fd_contexts_.contains(fd)) {
-                fd_contexts_[fd].fd_ = fd;
-            }
-            return &fd_contexts_[fd];
+        UringOp(UringOp&&) = delete;
+
+        static UringOp&& link_ops(UringOp&& lhs, UringOp&&) {
+            lhs.sqe_->flags |= IOSQE_IO_LINK;
+            return std::move(lhs);
         }
 
-        void tickle() override;
-        void timerInsertTickle() override { tickle(); }
-        void idle() override;
+        struct io_uring_sqe* getSqe() const noexcept { return sqe_; }
 
-        int epfd_{};
-        int ticklefd_[2]{};
-        std::unordered_map<int, FDEventContext> fd_contexts_;
-        std::atomic<std::size_t> num_of_events_;
-        Mutex mutex_;
+        int res_;
+
+    private:
+        friend class IOManager;
+        struct io_uring_sqe* sqe_;
+        Fiber* fiber_;
+
+        void yield() {
+            Fiber::yield();
+            if (res_ < 0) {
+                errno = -res_;
+                // res_ = -1;
+            }
+        }
+
+    public:
+        UringOp&& prep_openat(int dirfd, char const* path, int flags, mode_t mode) && {
+            io_uring_prep_openat(sqe_, dirfd, path, flags, mode);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_socket(int domain, int type, int protocol, unsigned int flags) && {
+            io_uring_prep_socket(sqe_, domain, type, protocol, flags);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_accept(int fd, struct sockaddr* addr, socklen_t* addrlen, int flags) && {
+            io_uring_prep_accept(sqe_, fd, addr, addrlen, flags);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_connect(int fd, const struct sockaddr* addr, socklen_t addrlen) && {
+            io_uring_prep_connect(sqe_, fd, addr, addrlen);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_read(int fd, void* buf, unsigned int len, std::uint64_t offset) && {
+            io_uring_prep_read(sqe_, fd, buf, len, offset);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_write(int fd, const void* buf, unsigned int len, std::uint64_t offset) && {
+            io_uring_prep_write(sqe_, fd, buf, len, offset);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_recv(int fd, void* buf, size_t len, int flags) && {
+            io_uring_prep_recv(sqe_, fd, buf, len, flags);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_send(int fd, const void* buf, size_t len, int flags) && {
+            io_uring_prep_send(sqe_, fd, buf, len, flags);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_close(int fd) && {
+            io_uring_prep_close(sqe_, fd);
+            yield();
+            spdlog::debug("{}, ret: {}", __PRETTY_FUNCTION__, res_);
+            return std::move(*this);
+        }
+
+        // NOLINTEND
     };
 
 } // namespace sylar

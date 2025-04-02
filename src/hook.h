@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <dlfcn.h>
 #include <functional>
 #include <sys/socket.h>
@@ -28,7 +27,6 @@ inline auto socket_f = OriginalFunction<socket_func>("socket");
 
 using connect_func = int(int, const struct sockaddr*, socklen_t);
 inline auto connect_f = OriginalFunction<connect_func>("connect");
-int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen, uint64_t timeout);
 
 using accept_func = int(int, struct sockaddr*, socklen_t*);
 inline auto accept_f = OriginalFunction<accept_func>("accept");

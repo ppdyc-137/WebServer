@@ -1,23 +1,15 @@
 add_library(sylar SHARED
-    config.cpp
     util.cpp
-    thread.cpp
-    mutex.cpp
     fiber.cpp
-    log.cpp
-    scheduler.cpp
     iomanager.cpp
-    timer.cpp
     hook.cpp
-    file_descriptor.cpp
-    net/address.cpp
-    net/socket.cpp
-    net/http.cpp
 )
 
 target_link_libraries(sylar PRIVATE
     pthread
     spdlog::spdlog
+    uring
+    boost_context
 )
 
 target_link_libraries(sylar PUBLIC
