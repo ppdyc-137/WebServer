@@ -17,19 +17,21 @@ auto response_str = response_template.toString();
 
 void handle(std::shared_ptr<sylar::Socket> client_sock) {
     thread_local static char buf[1024];
-    auto ret = client_sock->recv(buf, sizeof(buf));
-    if (ret < 0) {
-        return;
+    while (true) {
+        auto ret = client_sock->recv(buf, sizeof(buf));
+        if (ret <= 0) {
+            return;
+        }
+        ret = client_sock->send(response_str.c_str(), response_str.size());
     }
-    ret = client_sock->send(response_str.c_str(), response_str.size());
 }
 
-auto manager = sylar::IOManager(2, "scheduler");
+auto manager = sylar::IOManager(1, "scheduler");
 void signal_handler(int) {
-    spdlog::debug("Fiber Created {}", sylar::Fiber::getFiberCreated());
-    spdlog::debug("events: {}", manager.getEventsCount());
-    spdlog::debug("tasks: {}, free: {}", manager.getTaskCount(), manager.getFreeTaskCount());
-    spdlog::debug("threads: active: {}, idle: {}", manager.getActiveThreadCount(), manager.getIdleThreadCount());
+    spdlog::info("Fiber Created {}", sylar::Fiber::getFiberCreated());
+    spdlog::info("events: {}", manager.getEventsCount());
+    spdlog::info("tasks: {}, free: {}", manager.getTaskCount(), manager.getFreeTaskCount());
+    spdlog::info("threads: active: {}, idle: {}", manager.getActiveThreadCount(), manager.getIdleThreadCount());
 }
 
 void test_echo_server() {
@@ -63,8 +65,7 @@ void test_echo_server() {
 int main() {
     signal(SIGINT, signal_handler);
 
-    spdlog::set_level(spdlog::level::debug);
+    // spdlog::set_level(spdlog::level::debug);
     manager.start();
-    // manager.schedule(test_echo_server);
-    test_echo_server();
+    manager.schedule(test_echo_server);
 }

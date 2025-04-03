@@ -7,6 +7,7 @@
 const sylar::HttpResponse response_template = {
     .version_ = 0x11,
     .status_ = sylar::HttpStatus::OK,
+    .reason_ = "",
     .headers_ = {
         {"content-type", "text/plain"}
     },
