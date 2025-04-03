@@ -1,5 +1,5 @@
 #include "fiber.h"
-#include "iomanager.h"
+#include "io_context.h"
 #include "util.h"
 
 #include <cassert>
@@ -14,9 +14,9 @@ namespace sylar {
 
     Fiber::Fiber() : state_(EXEC) { t_current_fiber = this; }
 
-    Fiber* Fiber::newFiber(FiberFunc func, uint32_t stack_size) { return new Fiber(std::move(func), stack_size); }
+    Fiber* Fiber::newFiber(Func func, uint32_t stack_size) { return new Fiber(std::move(func), stack_size); }
 
-    Fiber::Fiber(FiberFunc func, uint32_t stack_size)
+    Fiber::Fiber(Func func, uint32_t stack_size)
         : stack_size_(stack_size), func_(std::move(func)), stack_(std::make_unique<char[]>(stack_size_)),
           context_(make_fcontext(stack_.get() + stack_size_, stack_size_, &Fiber::run)) {
 
@@ -25,7 +25,7 @@ namespace sylar {
         }
     }
 
-    void Fiber::reset(FiberFunc func) {
+    void Fiber::reset(Func func) {
         state_ = READY;
         func_ = std::move(func);
 
@@ -34,11 +34,11 @@ namespace sylar {
 
     Fiber::~Fiber() {
         if (stack_) {
-            SYLAR_ASSERT(state_ == INIT || state_ == TERM || state_ == EXCEPT);
+            myAssert(state_ == INIT || state_ == TERM || state_ == EXCEPT);
         } else {
             // main fiber
-            SYLAR_ASSERT(!func_);
-            SYLAR_ASSERT(state_ == EXEC);
+            checkRet(!func_);
+            myAssert(state_ == EXEC);
             if (t_current_fiber == this) {
                 t_current_fiber = nullptr;
             }
@@ -46,8 +46,7 @@ namespace sylar {
     }
 
     void Fiber::swapIn() {
-        SYLAR_ASSERT2(t_current_fiber == IOManager::getCurrentSchedulerFiber(),
-                      "only scheduler fiber can swap into a fiber");
+        myAssert(t_current_fiber == IOContext::getCurrentContextFiber());
 
         state_ = EXEC;
         t_current_fiber = this;
@@ -55,28 +54,28 @@ namespace sylar {
     }
 
     void Fiber::swapOut() {
-        SYLAR_ASSERT(t_current_fiber == this);
+        myAssert(t_current_fiber == this);
 
         // a fiber can only swap out to the scheduler fiber
-        t_current_fiber = IOManager::getCurrentSchedulerFiber();
-        SYLAR_ASSERT(t_current_fiber);
+        t_current_fiber = IOContext::getCurrentContextFiber();
+        myAssert(t_current_fiber);
 
         state_ = READY;
-        SYLAR_ASSERT(state_ != EXEC);
+        myAssert(state_ != EXEC);
         t_current_fiber->context_ = jump_fcontext(t_current_fiber->context_, nullptr).fctx;
     }
 
     void Fiber::yield() {
-        SYLAR_ASSERT(t_current_fiber != nullptr);
-        SYLAR_ASSERT(t_current_fiber->state_ == EXEC);
+        myAssert(t_current_fiber != nullptr);
+        myAssert(t_current_fiber->state_ == EXEC);
         t_current_fiber->swapOut();
     }
 
     void Fiber::run(boost::context::detail::transfer_t arg) {
-        IOManager::getCurrentSchedulerFiber()->context_ = arg.fctx;
+        IOContext::getCurrentContextFiber()->context_ = arg.fctx;
 
         {
-            auto *fiber = getCurrentFiber();
+            auto* fiber = getCurrentFiber();
             try {
                 fiber->func_();
                 fiber->func_ = nullptr;
@@ -89,7 +88,7 @@ namespace sylar {
                 spdlog::error("Fiber::run error");
             }
         }
-        t_current_fiber = IOManager::getCurrentSchedulerFiber();
+        t_current_fiber = IOContext::getCurrentContextFiber();
         t_current_fiber->state_ = EXEC;
 
         jump_fcontext(t_current_fiber->context_, nullptr);

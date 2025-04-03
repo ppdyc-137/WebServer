@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/context/detail/fcontext.hpp>
-#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -9,7 +8,7 @@ namespace sylar {
 
     class Fiber {
     public:
-        using FiberFunc = std::function<void()>;
+        using Func = std::function<void()>;
         enum State : uint8_t {
             INIT,
             READY,
@@ -20,7 +19,7 @@ namespace sylar {
         static constexpr const char* STATE_STR[] = {"INIT", "READY", "EXEC", "TERM", "EXCEPT"};
 
         constexpr static uint32_t DEFAULT_STACK_SIZE = 1 * 1024 * 1024;
-        static Fiber* newFiber(FiberFunc func = nullptr, uint32_t stack_size = DEFAULT_STACK_SIZE);
+        static Fiber* newFiber(Func func = nullptr, uint32_t stack_size = DEFAULT_STACK_SIZE);
         ~Fiber();
 
         void resume() { swapIn(); }
@@ -28,24 +27,23 @@ namespace sylar {
 
         static Fiber* getCurrentFiber() { return t_current_fiber; }
 
-        const char* getStateStr() { return STATE_STR[static_cast<uint32_t>(state_)]; };
+        const char* getStateStr() { return STATE_STR[static_cast<std::size_t>(state_)]; };
         State getState() { return state_; }
 
     private:
-        friend class Scheduler;
-        friend class IOManager;
-        Fiber(FiberFunc func, uint32_t stack_size);
+        friend class IOContext;
+        Fiber(Func func, uint32_t stack_size);
         Fiber(); // main fiber in new thread
 
         static void run(boost::context::detail::transfer_t t);
         void swapIn();
         void swapOut();
-        void reset(FiberFunc func);
+        void reset(Func func);
 
         State state_{INIT};
         uint32_t stack_size_{};
 
-        FiberFunc func_;
+        Func func_;
         std::unique_ptr<char[]> stack_;
 
         boost::context::detail::fcontext_t context_{};

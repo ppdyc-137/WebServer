@@ -1,7 +1,8 @@
-#include "iomanager.h"
+#include "io_context.h"
 #include "fiber.h"
-#include "hook.h"
+#include "uring_op.h"
 #include "util.h"
+
 #include <cassert>
 #include <cstring>
 #include <fcntl.h>
@@ -10,17 +11,16 @@
 #include <unistd.h>
 
 namespace sylar {
-    IOManager::IOManager() {
-        auto ret = io_uring_queue_init(RING_SIZE, &uring_, 0);
-        t_current_scheduler = this;
-        Fiber::t_current_fiber = &t_current_scheduler_fiber;
-        setHookEnable(true);
-        SYLAR_ASSERT2(ret == 0, strerror(-ret));
+    IOContext::IOContext() {
+        myAssert(t_context == nullptr);
+        t_context = this;
+        checkRetUring(io_uring_queue_init(RING_SIZE, &uring_, 0));
+        Fiber::t_current_fiber = &t_context_fiber;
     }
 
-    IOManager::~IOManager() { io_uring_queue_exit(&uring_); }
+    IOContext::~IOContext() { io_uring_queue_exit(&uring_); }
 
-    struct io_uring_sqe* IOManager::getSqe() {
+    struct io_uring_sqe* IOContext::getSqe() {
         struct io_uring_sqe* sqe = io_uring_get_sqe(&uring_);
         while (!sqe) {
             int res = io_uring_submit(&uring_);
@@ -36,12 +36,12 @@ namespace sylar {
         return sqe;
     }
 
-    void IOManager::execute() {
+    void IOContext::execute() {
         while (runOnce()) {
         }
     }
 
-    bool IOManager::runOnce() {
+    bool IOContext::runOnce() {
         while (!ready_tasks_.empty()) {
             auto* task = ready_tasks_.front();
             ready_tasks_.pop();
@@ -72,9 +72,11 @@ namespace sylar {
         unsigned num{};
         io_uring_for_each_cqe(&uring_, head, cqe) {
             auto* op = static_cast<UringOp*>(io_uring_cqe_get_data(cqe));
-            op->res_ = cqe->res;
-            auto* task = op->fiber_;
-            schedule(task);
+            if (op != nullptr) [[likely]] {
+                op->res_ = cqe->res;
+                auto* task = op->fiber_;
+                schedule(task);
+            }
             ++num;
         }
         io_uring_cq_advance(&uring_, num);
@@ -82,7 +84,7 @@ namespace sylar {
         return true;
     }
 
-    void IOManager::schedule(Func const& func) {
+    void IOContext::schedule(Func const& func) {
         Task task = nullptr;
         if (!free_tasks_.empty()) {
             task = free_tasks_.front();
@@ -94,6 +96,6 @@ namespace sylar {
         ready_tasks_.push(task);
     }
 
-    void IOManager::schedule(Task task) { ready_tasks_.push(task); }
+    void IOContext::schedule(Task task) { ready_tasks_.push(task); }
 
 } // namespace sylar
