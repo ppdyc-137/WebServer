@@ -18,17 +18,10 @@ namespace sylar {
         ~IOManager();
 
         void execute();
-        void schedule(Func const& func) {
-            Task task = nullptr;
-            if (!free_tasks_.empty()) {
-                task = free_tasks_.front();
-                free_tasks_.pop();
-                task->reset(func);
-            } else {
-                task = Fiber::newFiber(func);
-            }
-            ready_tasks_.push(task);
-        }
+        bool runOnce();
+
+        void schedule(Func const& func);
+        void schedule(Task);
 
         static IOManager* getCurrentScheduler() { return t_current_scheduler; }
         static Fiber* getCurrentSchedulerFiber() { return &t_current_scheduler_fiber; }
@@ -37,8 +30,6 @@ namespace sylar {
     private:
         friend struct UringOp;
         struct io_uring_sqe* getSqe();
-
-        void submit() { io_uring_submit(&uring_); }
 
         static constexpr int RING_SIZE = 256;
         io_uring uring_{};

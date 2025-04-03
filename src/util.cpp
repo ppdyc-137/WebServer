@@ -73,4 +73,11 @@ namespace sylar {
         return (static_cast<uint64_t>(tp.tv_sec) * K) + (static_cast<uint64_t>(tp.tv_usec) / K);
     }
 
+    void schedSetThreadAffinity(size_t cpu) {
+        cpu_set_t cpu_set;
+        CPU_ZERO(&cpu_set);
+        CPU_SET(cpu, &cpu_set);
+        SYLAR_ASSERT2(sched_setaffinity(gettid(), sizeof(cpu_set_t), &cpu_set) >= 0, strerror(errno));
+    }
+
 } // namespace sylar

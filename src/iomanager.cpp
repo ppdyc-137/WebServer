@@ -37,52 +37,63 @@ namespace sylar {
     }
 
     void IOManager::execute() {
-        while (true) {
-            while (!ready_tasks_.empty()) {
-                auto* task = ready_tasks_.front();
-                ready_tasks_.pop();
-
-                task->resume();
-
-                auto state = task->getState();
-                if (state == Fiber::TERM || state == Fiber::EXCEPT) {
-                    free_tasks_.push(task);
-                }
-            }
-
-            struct io_uring_cqe* cqe = nullptr;
-            // io_uring_submit(&uring_);
-            // while (true) {
-            //     int ret = io_uring_peek_cqe(&uring_, &cqe);
-            //     if (ret == 0) {
-            //         break;
-            //     }
-            // }
-            {
-                int res = io_uring_submit_and_wait_timeout(&uring_, &cqe, 1, nullptr, nullptr);
-                if (res == -ETIME) {
-                    continue;
-                }
-                if (res < 0) [[unlikely]] {
-                    if (res != -EINTR) {
-                        spdlog::error("io_uring_wait: {}", strerror(-res));
-                    }
-                    continue;
-                }
-            }
-
-            unsigned head{};
-            unsigned num{};
-            io_uring_for_each_cqe(&uring_, head, cqe) {
-                auto* op = static_cast<UringOp*>(io_uring_cqe_get_data(cqe));
-                op->res_ = cqe->res;
-                auto* task = op->fiber_;
-                ready_tasks_.push(task);
-                ++num;
-            }
-            io_uring_cq_advance(&uring_, num);
-            pending_ops_ -= static_cast<std::size_t>(num);
+        while (runOnce()) {
         }
     }
+
+    bool IOManager::runOnce() {
+        while (!ready_tasks_.empty()) {
+            auto* task = ready_tasks_.front();
+            ready_tasks_.pop();
+
+            task->resume();
+
+            auto state = task->getState();
+            if (state == Fiber::TERM || state == Fiber::EXCEPT) {
+                free_tasks_.push(task);
+            }
+        }
+        if (pending_ops_ == 0) {
+            return false;
+        }
+
+        struct io_uring_cqe* cqe = nullptr;
+        {
+            int res = io_uring_submit_and_wait_timeout(&uring_, &cqe, 1, nullptr, nullptr);
+            if (res < 0) [[unlikely]] {
+                if (res != -EINTR) {
+                    spdlog::error("io_uring_wait: {}", strerror(-res));
+                }
+                return true;
+            }
+        }
+
+        unsigned head{};
+        unsigned num{};
+        io_uring_for_each_cqe(&uring_, head, cqe) {
+            auto* op = static_cast<UringOp*>(io_uring_cqe_get_data(cqe));
+            op->res_ = cqe->res;
+            auto* task = op->fiber_;
+            schedule(task);
+            ++num;
+        }
+        io_uring_cq_advance(&uring_, num);
+        pending_ops_ -= static_cast<std::size_t>(num);
+        return true;
+    }
+
+    void IOManager::schedule(Func const& func) {
+        Task task = nullptr;
+        if (!free_tasks_.empty()) {
+            task = free_tasks_.front();
+            free_tasks_.pop();
+            task->reset(func);
+        } else {
+            task = Fiber::newFiber(func);
+        }
+        ready_tasks_.push(task);
+    }
+
+    void IOManager::schedule(Task task) { ready_tasks_.push(task); }
 
 } // namespace sylar

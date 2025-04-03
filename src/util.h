@@ -26,6 +26,8 @@ namespace sylar {
     std::string strevent(uint32_t events);
 
     uint64_t getCurrentTimeMS();
+
+    void schedSetThreadAffinity(size_t cpu);
 } // namespace sylar
 
 #ifndef NDEBUG
@@ -47,4 +49,3 @@ namespace sylar {
 #define SYLAR_ASSERT2(x, msg)
 
 #endif
-

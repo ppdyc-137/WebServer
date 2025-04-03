@@ -1,6 +1,9 @@
 #include "iomanager.h"
+#include "util.h"
 
 #include <arpa/inet.h>
+#include <functional>
+#include <mutex>
 #include <sys/socket.h>
 
 #include <spdlog/spdlog.h>
@@ -31,6 +34,42 @@ void handle(int sock) {
     UringOp().prep_close(sock);
 }
 
+struct Worker {
+    using Task = std::function<void()>;
+    std::jthread th;
+    std::condition_variable cv;
+    std::mutex mtx;
+    std::queue<Task> q;
+
+    void spawn(Task task) {
+        std::lock_guard lock(mtx);
+        q.push(task);
+        cv.notify_one();
+    }
+
+    void start(size_t i) {
+        th = std::jthread([this, i]() {
+            IOManager manager;
+            schedSetThreadAffinity(i);
+            while (true) [[likely]] {
+                while (manager.runOnce()) {
+                    std::unique_lock lck(mtx);
+                    if (!q.empty()) {
+                        break;
+                    }
+                }
+
+                std::unique_lock lck(mtx);
+                cv.wait(lck, [this] { return !q.empty(); });
+                while (!q.empty()) {
+                    manager.schedule(q.front());
+                    q.pop();
+                }
+            }
+        });
+    }
+};
+
 void test_socket() {
     spdlog::debug("test_socket");
     int sock = UringOp().prep_socket(AF_INET, SOCK_STREAM, 0, 0).res_;
@@ -60,7 +99,14 @@ void test_socket() {
         }
     }
 
+    std::vector<Worker> workers(std::thread::hardware_concurrency());
+
+    for (std::size_t i = 0; i < workers.size(); ++i) {
+        workers[i].start(i);
+    }
+
     spdlog::info("Listening on port 8080...");
+    std::size_t i = 0;
     while (true) {
         sockaddr_in client_addr;
         socklen_t addr_len = sizeof(client_addr);
@@ -69,7 +115,11 @@ void test_socket() {
             spdlog::error("accept error: {}", std::strerror(errno));
             break;
         }
-        IOManager::getCurrentScheduler()->schedule(([client_sock]() { handle(client_sock); }));
+        workers[i].spawn([client_sock]() { handle(client_sock); });
+        ++i;
+        if (i >= workers.size()) {
+            i = 0;
+        }
     }
 }
 
