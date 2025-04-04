@@ -5,6 +5,7 @@ add_library(sylar SHARED
     hook.cpp
     timer.cpp
     socket.cpp
+    stream/stream.cpp
 )
 
 target_link_libraries(sylar PRIVATE
