@@ -12,3 +12,6 @@ target_link_libraries(test_server_mt PRIVATE sylar spdlog::spdlog )
 add_executable(test_timer test_timer.cpp)
 target_link_libraries(test_timer PRIVATE sylar spdlog::spdlog )
 
+add_executable(test_file test_file.cpp)
+target_link_libraries(test_file PRIVATE sylar spdlog::spdlog )
+

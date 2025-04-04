@@ -40,8 +40,7 @@ namespace sylar {
     void sleepFor(std::chrono::system_clock::duration duration) {
         auto* context = IOContext::getCurrentContext();
         if (context) {
-            context->addTimer(
-                duration, [fiber = Fiber::getCurrentFiber()]() { IOContext::spawn(fiber); });
+            context->addTimer(duration, [fiber = Fiber::getCurrentFiber()]() { IOContext::spawn(fiber); });
             Fiber::yield();
         } else {
             std::this_thread::sleep_for(duration);

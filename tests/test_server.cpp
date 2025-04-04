@@ -1,5 +1,5 @@
 #include "io_context.h"
-#include "util.h"
+#include "socket.h"
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -14,41 +14,29 @@ const std::string response = "HTTP/1.1 200 OK\r\n"
                              "\r\n"
                              "Hello, world!";
 
-void handle(int sock) {
-    thread_local static char buf[1024];
+void handle(int fd) {
+    auto sock = SocketHandle(fd);
+    char buf[256];
     while (true) {
-        auto ret = read(sock, buf, sizeof(buf));
+        auto ret = socket_read(sock, buf);
         if (ret <= 0) {
-            spdlog::debug("{} disconnect", sock);
+            spdlog::debug("{} disconnect", sock.fileNo());
             break;
         }
-        spdlog::debug("{} read {}: {}", sock, ret, buf);
-        write(sock, response.c_str(), response.size());
+        auto read = std::string(buf, static_cast<size_t>(ret));
+        spdlog::debug("{} read {}: {}", sock.fileNo(), ret, read);
+        socket_write(sock, response);
     }
-    close(sock);
+    file_close(std::move(sock));
 }
 
 void test_socket() {
     spdlog::info("test_socket");
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    checkRet(sock);
-
-    sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(8080);
-    inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr.s_addr);
-
-    checkRet(bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
-    checkRet(listen(sock, SOMAXCONN));
-
+    auto sock = socket_listen(*AddressResolver().host("127.0.0.1").port(8080).resolve_one(), SOMAXCONN);
     spdlog::info("Listening on port 8080...");
     while (true) {
-        sockaddr_in client_addr;
-        socklen_t addr_len = sizeof(client_addr);
-        int client_sock = accept(sock, reinterpret_cast<sockaddr*>(&client_addr), &addr_len);
-        checkRet(client_sock);
+        auto client_sock = socket_accept(sock).releaseFile();
         IOContext::spawn(([client_sock]() { handle(client_sock); }));
     }
 }
