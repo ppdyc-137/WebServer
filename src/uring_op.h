@@ -5,40 +5,75 @@
 #include "util.h"
 
 #include <liburing.h>
+#include <optional>
 #include <spdlog/spdlog.h>
+
 namespace sylar {
     // NOLINTBEGIN
     struct [[nodiscard]] UringOp {
-        UringOp() : fiber_(Fiber::getCurrentFiber()) {
-            myAssert(fiber_);
+        using timeout_type = std::optional<std::chrono::system_clock::duration>;
+        UringOp(timeout_type timeout = std::nullopt) : timeout_(timeout) {
+            myAssert(Fiber::getCurrentFiber());
             sqe_ = IOContext::getCurrentContext()->getSqe();
-            io_uring_sqe_set_data(sqe_, this);
+            io_uring_sqe_set_data(sqe_, &op_data_);
         }
         ~UringOp() { myAssert(yield_); }
 
         UringOp(UringOp&&) = delete;
 
-        [[nodiscard("need to call await")]]
-        static UringOp&& link_ops(UringOp&& lhs, UringOp&& rhs) {
-            lhs.sqe_->flags |= IOSQE_IO_LINK;
-            io_uring_sqe_set_data(rhs.sqe_, nullptr);
-            rhs.yield_ = true;
-            return std::move(lhs);
-        }
-
     private:
         friend class IOContext;
 
-        int res_;
+        struct UringData {
+            int res_{};
+            Fiber* fiber_{Fiber::getCurrentFiber()};
+        };
+
+        void prep_link_timeout(UringData* data, struct __kernel_timespec* tp) {
+            sqe_->flags |= IOSQE_IO_LINK;
+
+            auto sqe = IOContext::getCurrentContext()->getSqe();
+            io_uring_sqe_set_data(sqe, data);
+            io_uring_prep_link_timeout(sqe, tp, IORING_TIMEOUT_BOOTTIME);
+
+            spdlog::debug("{}", __PRETTY_FUNCTION__);
+        }
+        void prep_cancel(UringData* data) {
+            auto sqe = IOContext::getCurrentContext()->getSqe();
+            io_uring_prep_cancel(sqe, this, IORING_ASYNC_CANCEL_ALL);
+            io_uring_sqe_set_data(sqe, data);
+
+            spdlog::debug("{}", __PRETTY_FUNCTION__);
+        }
+
         bool yield_{false};
         struct io_uring_sqe* sqe_;
-        Fiber* fiber_;
+        timeout_type timeout_;
+
+        UringData op_data_;
 
     public:
         int await() && {
-            Fiber::yield();
+            if (timeout_) {
+                bool canceled_{false};
+                auto ts = durationToKernelTimespec(*timeout_);
+                UringData timeout_data_;
+                UringData cancel_data_;
+
+                prep_link_timeout(&timeout_data_, &ts);
+                for (int i = 0; i < 2; i++) {
+                    Fiber::yield();
+                    if (timeout_data_.res_ == -ETIME && !canceled_) {
+                        canceled_ = true;
+                        prep_cancel(&cancel_data_);
+                        Fiber::yield();
+                    }
+                }
+            } else {
+                Fiber::yield();
+            }
             yield_ = true;
-            return res_;
+            return op_data_.res_;
         }
 
         [[nodiscard("need to call await")]]
@@ -104,6 +139,14 @@ namespace sylar {
             spdlog::debug("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
+
+        [[nodiscard("need to call await")]]
+        UringOp&& prep_link_timeout(struct __kernel_timespec* ts, unsigned int flags) && {
+            io_uring_prep_link_timeout(sqe_, ts, flags);
+            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            return std::move(*this);
+        }
+
         // NOLINTEND
     };
 } // namespace sylar

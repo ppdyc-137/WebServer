@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bytes_buffer.h"
+#include "uring_op.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -34,6 +35,8 @@ namespace sylar {
         virtual std::size_t raw_write(std::span<char const> /*unused*/) {
             throw std::system_error(std::make_error_code(std::errc::not_supported));
         }
+
+        virtual void raw_timeout(UringOp::timeout_type /*unused*/) {}
 
         Stream& operator=(Stream&&) = delete;
         virtual ~Stream() = default;
@@ -97,6 +100,8 @@ namespace sylar {
         }
         void flush();
         void close() { stream_->raw_close(); }
+
+        void timeout(UringOp::timeout_type timeout) { stream_->raw_timeout(timeout); }
 
         Stream& raw() const noexcept { return *stream_; }
         template <std::derived_from<Stream> Derived>

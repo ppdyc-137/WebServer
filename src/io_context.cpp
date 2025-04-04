@@ -89,12 +89,9 @@ namespace sylar {
         unsigned head{};
         unsigned num{};
         io_uring_for_each_cqe(&uring_, head, cqe) {
-            auto* op = static_cast<UringOp*>(io_uring_cqe_get_data(cqe));
-            if (op != nullptr) [[likely]] {
-                op->res_ = cqe->res;
-                auto* task = op->fiber_;
-                schedule(task);
-            }
+            auto* data = static_cast<UringOp::UringData*>(io_uring_cqe_get_data(cqe));
+            data->res_ = cqe->res;
+            schedule(data->fiber_);
             ++num;
         }
         io_uring_cq_advance(&uring_, num);

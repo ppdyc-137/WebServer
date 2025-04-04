@@ -17,3 +17,6 @@ target_link_libraries(test_file PRIVATE sylar spdlog::spdlog )
 
 add_executable(test_stream test_stream.cpp)
 target_link_libraries(test_stream PRIVATE sylar spdlog::spdlog )
+
+add_executable(test_timeout test_timeout.cpp)
+target_link_libraries(test_timeout PRIVATE sylar spdlog::spdlog )

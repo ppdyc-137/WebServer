@@ -94,7 +94,7 @@ namespace sylar {
 
     SocketHandle socket_connect(SocketAddress const& addr);
 
-    int socket_read(SocketHandle& sock, std::span<char> buf);
-    int socket_write(SocketHandle& sock, std::span<char const> buf);
+    int socket_read(SocketHandle& sock, std::span<char> buffer, UringOp::timeout_type timeout = std::nullopt);
+    int socket_write(SocketHandle& sock, std::span<char const> buffer, UringOp::timeout_type timeout = std::nullopt);
 
 } // namespace sylar

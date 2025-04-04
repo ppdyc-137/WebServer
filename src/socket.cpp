@@ -123,11 +123,15 @@ namespace sylar {
         return sock;
     }
 
-    int socket_read(SocketHandle& sock, std::span<char> buffer) {
-        return UringOp().prep_read(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0).await();
+    int socket_read(SocketHandle& sock, std::span<char> buffer, UringOp::timeout_type timeout) {
+        return UringOp(timeout)
+            .prep_read(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0)
+            .await();
     }
-    int socket_write(SocketHandle& sock, std::span<char const> buffer) {
-        return UringOp().prep_write(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0).await();
+    int socket_write(SocketHandle& sock, std::span<char const> buffer, UringOp::timeout_type timeout) {
+        return UringOp(timeout)
+            .prep_write(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0)
+            .await();
     }
 
 } // namespace sylar
