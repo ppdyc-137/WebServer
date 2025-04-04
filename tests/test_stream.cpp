@@ -22,10 +22,8 @@ void handle(int fd) {
             spdlog::info("{} read: {}", fd, line);
             stream.putline(line);
         }
-    } catch (std::system_error& e) {
-        if (e.code() == Stream::eof()) {
-            spdlog::debug("{} disconnect", fd);
-        }
+    } catch (Stream::EOFException& e) {
+        spdlog::debug("{} disconnect", fd);
     }
 }
 

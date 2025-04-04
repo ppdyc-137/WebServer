@@ -15,13 +15,9 @@ namespace sylar {
     inline constexpr std::size_t STREAM_BUFFER_SIZE = 8192;
 
     struct Stream {
-        static std::error_code eof() {
-            static struct : public std::error_category {
-                const char* name() const noexcept override { return "eof"; }
-                std::string message(int /*unused*/) const override { return "End of file"; }
-            } category;
-            return {1, category};
-        }
+        struct EOFException : std::exception {
+            const char* what() const noexcept override { return "End of file"; }
+        };
 
         virtual void raw_seek(std::uint64_t /*unused*/) {
             throw std::system_error(std::make_error_code(std::errc::invalid_seek));

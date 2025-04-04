@@ -53,11 +53,8 @@ namespace sylar {
                 index_end_ = index_in_ = 0;
                 fillbuf();
             }
-        } catch (std::system_error& e) {
-            if (e.code() == Stream::eof()) {
-                return;
-            }
-            throw;
+        } catch (Stream::EOFException& e) {
+            return;
         }
     }
     std::string BorrowedStream::getsome() {
@@ -106,11 +103,8 @@ namespace sylar {
                 index_end_ = index_in_ = 0;
                 fillbuf();
             }
-        } catch (std::system_error& e) {
-            if (e.code() == Stream::eof()) [[unlikely]] {
-                return;
-            }
-            throw;
+        } catch (Stream::EOFException& e) {
+            return;
         }
     }
 
@@ -152,7 +146,7 @@ namespace sylar {
                 len = stream_->raw_write(buf);
             }
             if (len == 0) [[unlikely]] {
-                throw std::system_error(Stream::eof());
+                throw Stream::EOFException();
             }
             index_out_ = 0;
             stream_->raw_flush();
@@ -165,7 +159,7 @@ namespace sylar {
         }
         auto n = stream_->raw_read(std::span(buffer_in_.data() + index_in_, buffer_in_.size() - index_in_));
         if (n == 0) [[unlikely]] {
-            throw std::system_error(Stream::eof());
+            throw Stream::EOFException();
         }
         index_end_ = index_in_ + n;
     }

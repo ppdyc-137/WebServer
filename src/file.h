@@ -23,7 +23,7 @@ namespace sylar {
 
         int releaseFile() noexcept { return std::exchange(fd_, -1); }
 
-        explicit operator bool() const noexcept { return fd_ != -1; }
+        explicit operator bool() const noexcept { return fd_ > 0; }
 
         FileHandle(FileHandle&& that) noexcept : fd_(that.releaseFile()) {}
 
@@ -33,7 +33,7 @@ namespace sylar {
         }
 
         ~FileHandle() {
-            if (fd_) {
+            if (fd_ > 0) {
                 close(fd_);
             }
         }
