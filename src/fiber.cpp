@@ -62,7 +62,7 @@ namespace sylar {
 
         state_ = READY;
         myAssert(state_ != EXEC);
-        t_current_fiber->context_ = jump_fcontext(t_current_fiber->context_, nullptr).fctx;
+        IOContext::getCurrentContextFiber()->context_ = jump_fcontext(t_current_fiber->context_, nullptr).fctx;
     }
 
     void Fiber::yield() {
