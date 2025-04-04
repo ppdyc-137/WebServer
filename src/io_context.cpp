@@ -1,5 +1,6 @@
 #include "io_context.h"
 #include "fiber.h"
+#include "hook.h"
 #include "uring_op.h"
 #include "util.h"
 
@@ -8,11 +9,15 @@
 #include <spdlog/spdlog.h>
 
 namespace sylar {
-    IOContext::IOContext(unsigned int entries) {
+    IOContext::IOContext(bool hook, unsigned int entries) {
         myAssert(t_context == nullptr);
         t_context = this;
         checkRetUring(io_uring_queue_init(entries, &uring_, 0));
         Fiber::t_current_fiber = &t_context_fiber;
+
+        if (hook) {
+            setHookEnable(true);
+        }
     }
 
     IOContext::~IOContext() { io_uring_queue_exit(&uring_); }
@@ -118,7 +123,6 @@ namespace sylar {
     }
 
     void IOContext::schedule(Task task) { ready_tasks_.push(task); }
-
 
     void IOContext::spawn(Func const& func) {
         myAssert(t_context);

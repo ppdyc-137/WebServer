@@ -16,7 +16,7 @@ namespace sylar {
         using Func = std::function<void()>;
         using Task = Fiber*;
 
-        explicit IOContext(unsigned int entries = RING_SIZE);
+        explicit IOContext(bool hook = false, unsigned int entries = RING_SIZE);
         ~IOContext();
 
         void execute();

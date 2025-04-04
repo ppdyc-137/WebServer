@@ -1,17 +1,46 @@
 #pragma once
 
 #include <dlfcn.h>
-#include <functional>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
 
+namespace sylar {
+    bool isHookEnable();
+    void setHookEnable(bool enable);
+} // namespace sylar
+
+struct Handle {
+    Handle() : handle_(dlopen("libc.so.6", RTLD_LAZY)) {
+        if (!handle_) {
+            throw std::runtime_error(dlerror());
+        }
+    }
+    ~Handle() {
+        if (handle_) {
+            dlclose(handle_);
+        }
+    }
+    static void* handle() {
+        static Handle handle;
+        return handle.handle_;
+    }
+    void* handle_;
+};
+
 template <typename Func>
 struct OriginalFunction {
-    explicit OriginalFunction(const char* name) : func_(reinterpret_cast<Func*>(dlsym(RTLD_NEXT, name))) {}
+    explicit OriginalFunction(const char* name) : func_(reinterpret_cast<Func*>(dlsym(Handle::handle(), name))) {
+        if (!func_) {
+            throw std::runtime_error(dlerror());
+        }
+    }
 
-    auto operator()(auto... args) { return func_(args...); }
-
-    std::function<Func> func_{};
+    template <typename... Args>
+    auto operator()(Args&&... args) const {
+        return func_(std::forward<Args>(args)...);
+    }
+    Func* func_;
 };
 
 using sleep_func = unsigned int(unsigned int);
@@ -46,4 +75,3 @@ inline auto sendto_f = OriginalFunction<sendto_func>("sendto");
 
 using close_func = int(int);
 inline auto close_f = OriginalFunction<close_func>("close");
-
