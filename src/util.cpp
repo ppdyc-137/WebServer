@@ -1,7 +1,9 @@
 #include "util.h"
+#include "io_context.h"
 
 #include <spdlog/spdlog.h>
 #include <stdexcept>
+#include <thread>
 
 namespace sylar {
     void schedSetThreadAffinity(size_t cpu) {
@@ -32,6 +34,17 @@ namespace sylar {
             spdlog::error("{}: ({}:{}) {}", location.file_name(), location.line(), location.column(),
                           location.function_name());
             throw std::runtime_error("assert");
+        }
+    }
+
+    void sleepFor(std::chrono::system_clock::duration duration) {
+        auto* context = IOContext::getCurrentContext();
+        if (context) {
+            context->addTimer(
+                duration, [fiber = Fiber::getCurrentFiber()]() { IOContext::spawn(fiber); });
+            Fiber::yield();
+        } else {
+            std::this_thread::sleep_for(duration);
         }
     }
 

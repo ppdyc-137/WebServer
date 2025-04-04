@@ -3,18 +3,15 @@
 #include "uring_op.h"
 #include "util.h"
 
-#include <cassert>
-#include <cstring>
-#include <fcntl.h>
+#include <chrono>
 #include <liburing.h>
 #include <spdlog/spdlog.h>
-#include <unistd.h>
 
 namespace sylar {
-    IOContext::IOContext() {
+    IOContext::IOContext(unsigned int entries) {
         myAssert(t_context == nullptr);
         t_context = this;
-        checkRetUring(io_uring_queue_init(RING_SIZE, &uring_, 0));
+        checkRetUring(io_uring_queue_init(entries, &uring_, 0));
         Fiber::t_current_fiber = &t_context_fiber;
     }
 
@@ -43,28 +40,44 @@ namespace sylar {
 
     bool IOContext::runOnce() {
         while (!ready_tasks_.empty()) {
-            auto* task = ready_tasks_.front();
+            Task task = ready_tasks_.front();
             ready_tasks_.pop();
-
-            task->resume();
-
-            auto state = task->getState();
-            if (state == Fiber::TERM || state == Fiber::EXCEPT) {
-                free_tasks_.push(task);
-            }
+            runTask(task);
         }
-        if (pending_ops_ == 0) {
+
+        auto timeout = getNextTriggerDuration();
+        if (pending_ops_ == 0 && !timeout) {
             return false;
         }
 
+        waitEvent(timeout);
+
+        auto expired_cbs = getExpiredCallBacks();
+        for (const auto& cb : expired_cbs) {
+            runTask(cb);
+        }
+        return true;
+    }
+
+    void IOContext::waitEvent(std::optional<std::chrono::system_clock::duration> timeout) {
         struct io_uring_cqe* cqe = nullptr;
         {
-            int res = io_uring_submit_and_wait_timeout(&uring_, &cqe, 1, nullptr, nullptr);
+            struct __kernel_timespec ts{};
+            struct __kernel_timespec* tsp = nullptr;
+            if (timeout) {
+                tsp = &(ts = durationToKernelTimespec(*timeout));
+            } else {
+                tsp = nullptr;
+            }
+            int res = io_uring_submit_and_wait_timeout(&uring_, &cqe, 1, tsp, nullptr);
+            if (res == -ETIME) {
+                return;
+            }
             if (res < 0) [[unlikely]] {
                 if (res != -EINTR) {
-                    spdlog::error("io_uring_wait: {}", strerror(-res));
+                    throw std::system_error(-res, std::system_category());
                 }
-                return true;
+                return;
             }
         }
 
@@ -81,10 +94,9 @@ namespace sylar {
         }
         io_uring_cq_advance(&uring_, num);
         pending_ops_ -= static_cast<std::size_t>(num);
-        return true;
     }
 
-    void IOContext::schedule(Func const& func) {
+    IOContext::Task IOContext::getTask(Func const& func) {
         Task task = nullptr;
         if (!free_tasks_.empty()) {
             task = free_tasks_.front();
@@ -93,9 +105,28 @@ namespace sylar {
         } else {
             task = Fiber::newFiber(func);
         }
-        ready_tasks_.push(task);
+        return task;
+    }
+
+    void IOContext::runTask(Task task) {
+        task->resume();
+
+        auto state = task->getState();
+        if (state == Fiber::TERM || state == Fiber::EXCEPT) {
+            free_tasks_.push(task);
+        }
     }
 
     void IOContext::schedule(Task task) { ready_tasks_.push(task); }
+
+
+    void IOContext::spawn(Func const& func) {
+        myAssert(t_context);
+        t_context->schedule(func);
+    }
+    void IOContext::spawn(Task task) {
+        myAssert(t_context);
+        t_context->schedule(task);
+    }
 
 } // namespace sylar

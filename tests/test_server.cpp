@@ -49,7 +49,7 @@ void test_socket() {
         socklen_t addr_len = sizeof(client_addr);
         int client_sock = accept(sock, reinterpret_cast<sockaddr*>(&client_addr), &addr_len);
         checkRet(client_sock);
-        IOContext::getCurrentContext()->schedule(([client_sock]() { handle(client_sock); }));
+        IOContext::spawn(([client_sock]() { handle(client_sock); }));
     }
 }
 

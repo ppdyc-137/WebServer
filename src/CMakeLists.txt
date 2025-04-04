@@ -3,6 +3,7 @@ add_library(sylar SHARED
     fiber.cpp
     io_context.cpp
     hook.cpp
+    timer.cpp
 )
 
 target_link_libraries(sylar PRIVATE
