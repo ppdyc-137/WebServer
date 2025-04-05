@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fiber.h"
+#include "detail/fiber.h"
 #include "io_context.h"
 #include "util.h"
 

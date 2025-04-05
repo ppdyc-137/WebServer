@@ -1,11 +1,11 @@
 add_library(sylar SHARED
-    util.cpp
-    fiber.cpp
-    io_context.cpp
-    hook.cpp
-    timer.cpp
-    socket.cpp
+    detail/fiber.cpp
+    detail/hook.cpp
+    detail/timer.cpp
+    file/socket.cpp
     stream/stream.cpp
+    io_context.cpp
+    util.cpp
 )
 
 target_link_libraries(sylar PRIVATE

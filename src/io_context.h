@@ -1,7 +1,7 @@
 #pragma once
 
-#include "fiber.h"
-#include "timer.h"
+#include "detail/fiber.h"
+#include "detail/timer.h"
 
 #include <cstdint>
 #include <liburing.h>
