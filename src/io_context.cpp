@@ -9,7 +9,7 @@
 
 namespace sylar {
     IOContext::IOContext(bool hook, unsigned int entries) {
-        myAssert(t_context == nullptr);
+        assertThat(t_context == nullptr);
         t_context = this;
         checkRetUring(io_uring_queue_init(entries, &uring_, 0));
         Fiber::t_current_fiber = &t_context_fiber;
@@ -123,11 +123,11 @@ namespace sylar {
     void IOContext::schedule(Task task) { ready_tasks_.push(task); }
 
     void IOContext::spawn(Func const& func) {
-        myAssert(t_context);
+        assertThat(t_context);
         t_context->schedule(func);
     }
     void IOContext::spawn(Task task) {
-        myAssert(t_context);
+        assertThat(t_context);
         t_context->schedule(task);
     }
 

@@ -2,7 +2,6 @@
 #include "io_context.h"
 
 #include <spdlog/spdlog.h>
-#include <stdexcept>
 #include <thread>
 
 namespace sylar {
@@ -13,27 +12,39 @@ namespace sylar {
         checkRet(sched_setaffinity(gettid(), sizeof(cpu_set_t), &cpu_set));
     }
 
-    int checkRet(int ret, std::source_location location) {
+    int checkRet(int ret, std::initializer_list<int> ignored, std::source_location location) {
         if (ret < 0) [[unlikely]] {
-            spdlog::error("{}: ({}:{}) {}", location.file_name(), location.line(), location.column(),
-                          location.function_name());
+            for (auto i : ignored) {
+                if (ret == i) {
+                    return ret;
+                }
+            }
+            spdlog::error("{}: ({}:{}) {} {}", location.file_name(), location.line(), location.column(),
+                          location.function_name(), errno);
             throw std::system_error(errno, std::system_category());
         }
         return ret;
     }
-    int checkRetUring(int ret, std::source_location location) {
+
+    int checkRetUring(int ret, std::initializer_list<int> ignored, std::source_location location) {
         if (ret < 0) [[unlikely]] {
-            spdlog::error("{}: ({}:{}) {}", location.file_name(), location.line(), location.column(),
-                          location.function_name());
+            for (auto i : ignored) {
+                if (ret == -i) {
+                    return ret;
+                }
+            }
+            spdlog::error("{}: ({}:{}) {} {}", location.file_name(), location.line(), location.column(),
+                          location.function_name(), -ret);
             throw std::system_error(-ret, std::system_category());
         }
         return ret;
     }
-    void myAssert(bool res, std::source_location location) {
+
+    void assertThat(bool res, const char* msg, std::source_location location) {
         if (!res) [[unlikely]] {
             spdlog::error("{}: ({}:{}) {}", location.file_name(), location.line(), location.column(),
                           location.function_name());
-            throw std::runtime_error("assert");
+            throw std::runtime_error(msg ? msg : "assert");
         }
     }
 

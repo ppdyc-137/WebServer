@@ -34,11 +34,11 @@ namespace sylar {
 
     Fiber::~Fiber() {
         if (stack_) {
-            myAssert(state_ == INIT || state_ == TERM || state_ == EXCEPT);
+            assertThat(state_ == INIT || state_ == TERM || state_ == EXCEPT);
         } else {
             // main fiber
             checkRet(!func_);
-            myAssert(state_ == EXEC);
+            assertThat(state_ == EXEC);
             if (t_current_fiber == this) {
                 t_current_fiber = nullptr;
             }
@@ -46,28 +46,28 @@ namespace sylar {
     }
 
     void Fiber::swapIn() {
-        myAssert(t_current_fiber == IOContext::getCurrentContextFiber());
+        assertThat(t_current_fiber == IOContext::getCurrentContextFiber());
 
         state_ = EXEC;
         t_current_fiber = this;
         context_ = jump_fcontext(context_, nullptr).fctx;
     }
 
-        myAssert(t_current_fiber == this);
     void Fiber::swapOut(State state) {
+        assertThat(t_current_fiber == this);
 
         // a fiber can only swap out to the scheduler fiber
         t_current_fiber = IOContext::getCurrentContextFiber();
-        myAssert(t_current_fiber);
+        assertThat(t_current_fiber);
 
-        myAssert(state_ != EXEC);
         state_ = state;
+        assertThat(state_ != EXEC);
         IOContext::getCurrentContextFiber()->context_ = jump_fcontext(t_current_fiber->context_, nullptr).fctx;
     }
 
-        myAssert(t_current_fiber != nullptr);
-        myAssert(t_current_fiber->state_ == EXEC);
     void Fiber::yield(State state) {
+        assertThat(t_current_fiber != nullptr);
+        assertThat(t_current_fiber->state_ == EXEC);
         t_current_fiber->swapOut(state);
     }
 

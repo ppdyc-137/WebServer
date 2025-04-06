@@ -19,8 +19,13 @@ namespace sylar {
 
     void sleepFor(std::chrono::system_clock::duration duration);
 
-    int checkRet(int ret, std::source_location location = std::source_location::current());
-    int checkRetUring(int ret, std::source_location location = std::source_location::current());
-    void myAssert(bool res, std::source_location location = std::source_location::current());
+    int checkRet(int ret, std::initializer_list<int> ignored = {},
+                 std::source_location location = std::source_location::current());
+
+    int checkRetUring(int ret, std::initializer_list<int> ignored = {},
+                      std::source_location location = std::source_location::current());
+
+    void assertThat(bool res, const char* msg = nullptr,
+                    std::source_location location = std::source_location::current());
 
 } // namespace sylar

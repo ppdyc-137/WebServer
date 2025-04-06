@@ -13,11 +13,11 @@ namespace sylar {
     struct [[nodiscard]] UringOp {
         using timeout_type = std::optional<std::chrono::system_clock::duration>;
         UringOp(timeout_type timeout = std::nullopt) : timeout_(timeout) {
-            myAssert(Fiber::getCurrentFiber());
+            assertThat(Fiber::getCurrentFiber());
             sqe_ = IOContext::getCurrentContext()->getSqe();
             io_uring_sqe_set_data(sqe_, &op_data_);
         }
-        ~UringOp() { myAssert(yield_); }
+        ~UringOp() { assertThat(yield_); }
 
         UringOp(UringOp&&) = delete;
 
