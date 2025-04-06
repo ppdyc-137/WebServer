@@ -1,7 +1,7 @@
 #include "io_context.h"
+#include "detail/hook.h"
 #include "uring_op.h"
 #include "util.h"
-#include "detail/hook.h"
 
 #include <chrono>
 #include <liburing.h>
@@ -112,8 +112,10 @@ namespace sylar {
     void IOContext::runTask(Task task) {
         task->resume();
 
-        auto state = task->getState();
-        if (state == Fiber::TERM || state == Fiber::EXCEPT) {
+        auto state = task->state_;
+        if (state == Fiber::READY) {
+            schedule(task);
+        } else if (state == Fiber::TERM || state == Fiber::EXCEPT) {
             free_tasks_.push(task);
         }
     }

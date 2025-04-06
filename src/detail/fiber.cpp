@@ -53,22 +53,22 @@ namespace sylar {
         context_ = jump_fcontext(context_, nullptr).fctx;
     }
 
-    void Fiber::swapOut() {
         myAssert(t_current_fiber == this);
+    void Fiber::swapOut(State state) {
 
         // a fiber can only swap out to the scheduler fiber
         t_current_fiber = IOContext::getCurrentContextFiber();
         myAssert(t_current_fiber);
 
-        state_ = READY;
         myAssert(state_ != EXEC);
+        state_ = state;
         IOContext::getCurrentContextFiber()->context_ = jump_fcontext(t_current_fiber->context_, nullptr).fctx;
     }
 
-    void Fiber::yield() {
         myAssert(t_current_fiber != nullptr);
         myAssert(t_current_fiber->state_ == EXEC);
-        t_current_fiber->swapOut();
+    void Fiber::yield(State state) {
+        t_current_fiber->swapOut(state);
     }
 
     void Fiber::run(boost::context::detail::transfer_t arg) {

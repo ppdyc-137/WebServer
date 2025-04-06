@@ -12,22 +12,24 @@ namespace sylar {
         enum State : uint8_t {
             INIT,
             READY,
+            HOLD,
             EXEC,
             TERM,
             EXCEPT,
         };
-        static constexpr const char* STATE_STR[] = {"INIT", "READY", "EXEC", "TERM", "EXCEPT"};
-
         constexpr static uint32_t DEFAULT_STACK_SIZE = 1 * 1024 * 1024;
         static Fiber* newFiber(Func func = nullptr, uint32_t stack_size = DEFAULT_STACK_SIZE);
         ~Fiber();
 
         void resume() { swapIn(); }
-        static void yield();
+        static void yield(State state = HOLD);
 
         static Fiber* getCurrentFiber() { return t_current_fiber; }
 
-        const char* getStateStr() { return STATE_STR[static_cast<std::size_t>(state_)]; };
+        const char* getStateStr() {
+            constexpr const char* state_str[] = {"INIT", "READY", "HOLD", "EXEC", "TERM", "EXCEPT"};
+            return state_str[static_cast<std::size_t>(state_)];
+        };
         State getState() { return state_; }
 
     private:
@@ -37,7 +39,7 @@ namespace sylar {
 
         static void run(boost::context::detail::transfer_t t);
         void swapIn();
-        void swapOut();
+        void swapOut(State state);
         void reset(Func func);
 
         State state_{INIT};
