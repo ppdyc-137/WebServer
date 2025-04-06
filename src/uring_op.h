@@ -147,6 +147,20 @@ namespace sylar {
             return std::move(*this);
         }
 
+        UringOp&& prep_futex_wait(uint32_t* futex, uint64_t val, uint64_t mask, uint32_t futex_flags,
+                                  unsigned int flags) && {
+            io_uring_prep_futex_wait(sqe_, futex, val, mask, futex_flags, flags);
+            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            return std::move(*this);
+        }
+
+        UringOp&& prep_futex_wake(uint32_t* futex, uint64_t val, uint64_t mask, uint32_t futex_flags,
+                                  unsigned int flags) && {
+            io_uring_prep_futex_wake(sqe_, futex, val, mask, futex_flags, flags);
+            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            return std::move(*this);
+        }
+
         // NOLINTEND
     };
 } // namespace sylar

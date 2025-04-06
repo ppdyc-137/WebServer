@@ -4,6 +4,7 @@ add_library(sylar SHARED
     detail/timer.cpp
     file/socket.cpp
     stream/stream.cpp
+    synchronization/futex.cpp
     io_context.cpp
     util.cpp
 )
