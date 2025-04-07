@@ -15,7 +15,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb -Wall -Wextra -Werror"
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wconversion -Wold-style-cast")
 
 find_package(spdlog REQUIRED)
-find_package(yaml-cpp REQUIRED)
 
 add_subdirectory(src)
 add_subdirectory(tests)

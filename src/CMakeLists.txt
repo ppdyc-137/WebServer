@@ -16,9 +16,5 @@ target_link_libraries(sylar PRIVATE
     boost_context
 )
 
-target_link_libraries(sylar PUBLIC
-    yaml-cpp::yaml-cpp
-)
-
 target_include_directories(sylar PUBLIC .)
 
