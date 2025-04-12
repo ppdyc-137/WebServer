@@ -61,21 +61,24 @@ namespace sylar {
     inline FileHandle file_open(const std::filesystem::path& path, OpenMode mode, mode_t access = 0644) {
         int flags = static_cast<int>(mode);
         int fd = UringOp().prep_openat(AT_FDCWD, path.c_str(), flags, access).await();
+        checkRetUring(fd);
         return FileHandle(fd);
     }
 
     inline void file_close(FileHandle file) { checkRetUring(UringOp().prep_close(file.releaseFile()).await()); }
 
     inline int file_read(FileHandle& file, std::span<char> buffer, uint64_t offset = static_cast<uint64_t>(-1)) {
-        return UringOp()
-            .prep_read(file.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), offset)
-            .await();
+        return checkRetUring(
+            UringOp()
+                .prep_read(file.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), offset)
+                .await());
     }
 
     inline int file_write(FileHandle& file, std::span<char const> buffer, uint64_t offset = static_cast<uint64_t>(-1)) {
-        return UringOp()
-            .prep_write(file.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), offset)
-            .await();
+        return checkRetUring(
+            UringOp()
+                .prep_write(file.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), offset)
+                .await());
     }
 
 } // namespace sylar

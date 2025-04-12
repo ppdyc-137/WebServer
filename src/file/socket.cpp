@@ -95,6 +95,7 @@ namespace sylar {
 
     SocketHandle createSocket(int family, int type, int protocol) {
         int fd = UringOp().prep_socket(family, type, protocol).await();
+        checkRetUring(fd);
         return SocketHandle{fd};
     }
 
@@ -114,24 +115,25 @@ namespace sylar {
     }
     SocketHandle socket_accept(SocketListener& listener) {
         int fd = UringOp().prep_accept(listener.fileNo(), nullptr, nullptr, 0).await();
+        checkRetUring(fd);
         return SocketHandle{fd};
     }
 
     SocketHandle socket_connect(SocketAddress const& addr) {
         SocketHandle sock = createSocket(addr.family(), addr.socktype(), addr.protocol());
-        checkRet(UringOp().prep_connect(sock.fileNo(), addr.raw_addr(), addr.len_).await());
+        checkRetUring(UringOp().prep_connect(sock.fileNo(), addr.raw_addr(), addr.len_).await());
         return sock;
     }
 
     int socket_read(SocketHandle& sock, std::span<char> buffer, UringOp::timeout_type timeout) {
-        return UringOp(timeout)
-            .prep_read(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0)
-            .await();
+        return checkRetUring(UringOp(timeout)
+                                 .prep_read(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0)
+                                 .await());
     }
     int socket_write(SocketHandle& sock, std::span<char const> buffer, UringOp::timeout_type timeout) {
-        return UringOp(timeout)
-            .prep_write(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0)
-            .await();
+        return checkRetUring(UringOp(timeout)
+                                 .prep_write(sock.fileNo(), buffer.data(), static_cast<unsigned int>(buffer.size()), 0)
+                                 .await());
     }
 
 } // namespace sylar
