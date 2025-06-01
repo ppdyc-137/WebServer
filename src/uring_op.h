@@ -1,7 +1,7 @@
 #pragma once
 
 #include "detail/fiber.h"
-#include "io_context.h"
+#include "processor.h"
 #include "util.h"
 
 #include <liburing.h>
@@ -14,7 +14,7 @@ namespace sylar {
         using timeout_type = std::optional<std::chrono::system_clock::duration>;
         UringOp(timeout_type timeout = std::nullopt) : timeout_(timeout) {
             assertThat(Fiber::getCurrentFiber());
-            sqe_ = IOContext::getCurrentContext()->getSqe();
+            sqe_ = getSqe();
             io_uring_sqe_set_data(sqe_, &op_data_);
         }
         ~UringOp() { assertThat(yield_); }
@@ -23,23 +23,26 @@ namespace sylar {
 
     private:
         friend class IOContext;
+        friend class Processor;
 
         struct UringData {
             int res_{};
             Fiber* fiber_{Fiber::getCurrentFiber()};
         };
 
+        struct io_uring_sqe* getSqe() { return Processor::getProcessor()->getSqe(); }
+
         void prep_link_timeout(UringData* data, struct __kernel_timespec* tp) {
             sqe_->flags |= IOSQE_IO_LINK;
 
-            auto sqe = IOContext::getCurrentContext()->getSqe();
+            auto sqe = getSqe();
             io_uring_sqe_set_data(sqe, data);
             io_uring_prep_link_timeout(sqe, tp, IORING_TIMEOUT_BOOTTIME);
 
             spdlog::debug("{}", __PRETTY_FUNCTION__);
         }
         void prep_cancel(UringData* data) {
-            auto sqe = IOContext::getCurrentContext()->getSqe();
+            auto sqe = getSqe();
             io_uring_prep_cancel(sqe, this, IORING_ASYNC_CANCEL_ALL);
             io_uring_sqe_set_data(sqe, data);
 

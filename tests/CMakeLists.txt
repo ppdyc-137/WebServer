@@ -6,9 +6,6 @@ target_link_libraries(test_hook PRIVATE sylar spdlog::spdlog )
 add_executable(test_server test_server.cpp)
 target_link_libraries(test_server PRIVATE sylar spdlog::spdlog )
 
-add_executable(test_server_mt test_server_mt.cpp)
-target_link_libraries(test_server_mt PRIVATE sylar spdlog::spdlog )
-
 add_executable(test_timer test_timer.cpp)
 target_link_libraries(test_timer PRIVATE sylar spdlog::spdlog )
 
@@ -23,3 +20,6 @@ target_link_libraries(test_timeout PRIVATE sylar spdlog::spdlog )
 
 add_executable(test_mutex test_mutex.cpp)
 target_link_libraries(test_mutex PRIVATE sylar spdlog::spdlog )
+
+add_executable(test_worksteal test_worksteal.cpp)
+target_link_libraries(test_worksteal PRIVATE sylar spdlog::spdlog )

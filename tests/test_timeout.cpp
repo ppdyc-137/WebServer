@@ -1,7 +1,7 @@
 #include "io_context.h"
+#include "stream/socket_stream.h"
 #include "uring_op.h"
 #include "util.h"
-#include "stream/socket_stream.h"
 
 #include <chrono>
 #include <spdlog/common.h>
@@ -44,6 +44,6 @@ void test() {
 int main() {
     spdlog::set_level(spdlog::level::debug);
     IOContext context;
-    context.schedule(test_socket_stream);
+    context.spawn(test_socket_stream);
     context.execute();
 }

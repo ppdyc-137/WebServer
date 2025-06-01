@@ -1,9 +1,10 @@
-#include "synchronization/mutex.h"
 #include "io_context.h"
+#include "synchronization/mutex.h"
 #include "util.h"
 
 #include <chrono>
 
+#include <latch>
 #include <spdlog/common.h>
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/spdlog.h>
@@ -24,47 +25,69 @@ void test_cond() {
     mutex.unlock();
 }
 
-Semaphore sem(2);
-void consumer(int sec) {
-    sem.acquire();
-    spdlog::info("{} working...", sec);
-    sleepFor(std::chrono::seconds(sec));
-    spdlog::info("{} done...", sec);
-    sem.release();
-};
-
 void test_sem() {
-    IOContext::spawn([]() { consumer(3); });
-    IOContext::spawn([]() { consumer(5); });
-    IOContext::spawn([]() { consumer(4); });
-    IOContext::spawn([]() { consumer(2); });
+    Semaphore sem(2);
+    auto consumer = [&](int sec) {
+        sem.acquire();
+        spdlog::info("{} working...", sec);
+        sleepFor(std::chrono::seconds(sec));
+        spdlog::info("{} done...", sec);
+        sem.release();
+    };
+    IOContext::spawn([consumer]() { consumer(3); });
+    IOContext::spawn([consumer]() { consumer(5); });
+    IOContext::spawn([consumer]() { consumer(4); });
+    IOContext::spawn([consumer]() { consumer(2); });
 }
 
+// run in main thread
 void test_mutex() {
-    Mutex mutex;
-    int sum{};
+    const ptrdiff_t nr_task = 10;
+    {
+        std::latch finish(nr_task);
 
-    auto run = [&](int) {
-        IOContext context;
-        context.schedule([&]() {
+        long sum{};
+
+        auto task = [&]() {
+            for (int i = 0; i < 1000000; i++) {
+                sum++;
+            }
+            finish.count_down();
+        };
+        for (int i = 0; i < nr_task; i++) {
+            IOContext::spawn(task);
+        }
+        finish.wait();
+
+        spdlog::info("sum without mutex: {}", sum);
+    }
+    {
+        std::latch finish(nr_task);
+
+        long sum{};
+
+        Mutex mutex;
+        auto task = [&]() {
             for (int i = 0; i < 1000000; i++) {
                 mutex.lock();
                 sum++;
                 mutex.unlock();
             }
-        });
-        context.execute();
-    };
+            finish.count_down();
+        };
+        for (int i = 0; i < nr_task; i++) {
+            IOContext::spawn(task);
+        }
+        finish.wait();
 
-    std::thread t1(run, 0), t2(run, 1);
-    t1.join();
-    t2.join();
-    spdlog::info("sum: {}", sum);
+        spdlog::info("sum with mutex: {}", sum);
+    }
 }
 
 int main() {
     // spdlog::set_level(spdlog::level::debug);
     IOContext context;
-    context.schedule(test_mutex);
     context.execute();
+
+    test_mutex();
 }

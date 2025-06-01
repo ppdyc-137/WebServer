@@ -49,7 +49,7 @@ namespace sylar {
     }
 
     void sleepFor(std::chrono::system_clock::duration duration) {
-        auto* context = IOContext::getCurrentContext();
+        auto* context = Processor::getProcessor();
         if (context) {
             context->addTimer(duration, [fiber = Fiber::getCurrentFiber()]() { IOContext::spawn(fiber); });
             Fiber::yield();

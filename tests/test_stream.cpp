@@ -41,7 +41,7 @@ void test_socket_stream() {
 int main() {
     spdlog::set_level(spdlog::level::debug);
 
-    IOContext context;
-    context.schedule(test_socket_stream);
-    context.execute();
+    IOContext scheduler;
+    scheduler.spawn(test_socket_stream);
+    scheduler.execute();
 }

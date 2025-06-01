@@ -33,7 +33,8 @@ namespace sylar {
         State getState() { return state_; }
 
     private:
-        friend class IOContext;
+        friend class RunQueue;
+        friend class Processor;
         Fiber(Func func, uint32_t stack_size);
         Fiber(); // main fiber in new thread
 

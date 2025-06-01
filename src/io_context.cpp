@@ -1,134 +1,50 @@
 #include "io_context.h"
-#include "detail/hook.h"
-#include "uring_op.h"
-#include "util.h"
 
-#include <chrono>
+#include <cstdlib>
+#include <latch>
 #include <liburing.h>
 #include <spdlog/spdlog.h>
 
 namespace sylar {
-    IOContext::IOContext(bool hook, unsigned int entries) {
-        assertThat(t_context == nullptr);
-        t_context = this;
-        checkRetUring(io_uring_queue_init(entries, &uring_, 0));
-        Fiber::t_current_fiber = &t_context_fiber;
+    namespace {
+        size_t randamN(size_t N) { return static_cast<size_t>(rand()) % N; }
+    } // namespace
 
-        if (hook) {
-            setHookEnable(true);
+    size_t IOContext::stealTasks(uint64_t id, RunQueue& rq) {
+        // get tasks from global queue
+        auto size = this->rq_.steal(rq, true);
+        if (size > 0) {
+            return size;
         }
-    }
-
-    IOContext::~IOContext() { io_uring_queue_exit(&uring_); }
-
-    struct io_uring_sqe* IOContext::getSqe() {
-        struct io_uring_sqe* sqe = io_uring_get_sqe(&uring_);
-        while (!sqe) {
-            int res = io_uring_submit(&uring_);
-            if (res < 0) [[unlikely]] {
-                if (res == -EINTR) {
-                    continue;
-                }
-                throw std::system_error(-res, std::system_category());
+        // steal tasks from other processors
+        uint64_t start = randamN(processors_.size());
+        for (size_t i = 0; i < processors_.size(); i++) {
+            auto pid = (start + i) % processors_.size();
+            if (pid == id) {
+                continue;
             }
-            sqe = io_uring_get_sqe(&uring_);
+            auto size = processors_[pid]->stealTasks(rq);
+            if (size > 0) {
+                return size;
+            }
         }
-        ++pending_ops_;
-        return sqe;
+        return 0;
     }
 
     void IOContext::execute() {
-        while (runOnce()) {
+        // make sure all processor is initialized
+        std::latch init_finish(static_cast<std::ptrdiff_t>(threads_.size()) + 1);
+
+        for (size_t i = 0; i < threads_.size(); ++i) {
+            threads_[i] = std::thread([&, i]() {
+                Processor processor(i, hook_);
+                processors_[i] = &processor;
+
+                init_finish.arrive_and_wait();
+                processor.execute();
+            });
         }
-    }
-
-    bool IOContext::runOnce() {
-        while (!ready_tasks_.empty()) {
-            Task task = ready_tasks_.front();
-            ready_tasks_.pop();
-            runTask(task);
-        }
-
-        auto timeout = getNextTriggerDuration();
-        if (pending_ops_ == 0 && !timeout) {
-            return false;
-        }
-
-        waitEvent(timeout);
-
-        auto expired_cbs = getExpiredCallBacks();
-        for (const auto& cb : expired_cbs) {
-            runTask(cb);
-        }
-        return true;
-    }
-
-    void IOContext::waitEvent(std::optional<std::chrono::system_clock::duration> timeout) {
-        struct io_uring_cqe* cqe = nullptr;
-        {
-            struct __kernel_timespec ts{};
-            struct __kernel_timespec* tsp = nullptr;
-            if (timeout) {
-                tsp = &(ts = durationToKernelTimespec(*timeout));
-            } else {
-                tsp = nullptr;
-            }
-            int res = io_uring_submit_and_wait_timeout(&uring_, &cqe, 1, tsp, nullptr);
-            if (res == -ETIME) {
-                return;
-            }
-            if (res < 0) [[unlikely]] {
-                if (res != -EINTR) {
-                    throw std::system_error(-res, std::system_category());
-                }
-                return;
-            }
-        }
-
-        unsigned head{};
-        unsigned num{};
-        io_uring_for_each_cqe(&uring_, head, cqe) {
-            auto* data = static_cast<UringOp::UringData*>(io_uring_cqe_get_data(cqe));
-            data->res_ = cqe->res;
-            schedule(data->fiber_);
-            ++num;
-        }
-        io_uring_cq_advance(&uring_, num);
-        pending_ops_ -= static_cast<std::size_t>(num);
-    }
-
-    IOContext::Task IOContext::getTask(Func const& func) {
-        Task task = nullptr;
-        if (!free_tasks_.empty()) {
-            task = free_tasks_.front();
-            free_tasks_.pop();
-            task->reset(func);
-        } else {
-            task = Fiber::newFiber(func);
-        }
-        return task;
-    }
-
-    void IOContext::runTask(Task task) {
-        task->resume();
-
-        auto state = task->state_;
-        if (state == Fiber::READY) {
-            schedule(task);
-        } else if (state == Fiber::TERM || state == Fiber::EXCEPT) {
-            free_tasks_.push(task);
-        }
-    }
-
-    void IOContext::schedule(Task task) { ready_tasks_.push(task); }
-
-    void IOContext::spawn(Func const& func) {
-        assertThat(t_context);
-        t_context->schedule(func);
-    }
-    void IOContext::spawn(Task task) {
-        assertThat(t_context);
-        t_context->schedule(task);
+        init_finish.arrive_and_wait();
     }
 
 } // namespace sylar

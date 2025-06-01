@@ -1,16 +1,18 @@
 #include "fiber.h"
-#include "io_context.h"
+#include "processor.h"
 #include "util.h"
 
 #include <cassert>
-#include <cerrno>
-#include <cstdlib>
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <ucontext.h>
 
 namespace sylar {
     using namespace boost::context::detail;
+
+    namespace {
+        Fiber* getCurrentMainFiber() { return Processor::getProcessorFiber(); }
+    } // namespace
 
     Fiber::Fiber() : state_(EXEC) { t_current_fiber = this; }
 
@@ -46,7 +48,7 @@ namespace sylar {
     }
 
     void Fiber::swapIn() {
-        assertThat(t_current_fiber == IOContext::getCurrentContextFiber());
+        assertThat(t_current_fiber == getCurrentMainFiber());
 
         state_ = EXEC;
         t_current_fiber = this;
@@ -57,12 +59,12 @@ namespace sylar {
         assertThat(t_current_fiber == this);
 
         // a fiber can only swap out to the scheduler fiber
-        t_current_fiber = IOContext::getCurrentContextFiber();
+        t_current_fiber = getCurrentMainFiber();
         assertThat(t_current_fiber);
 
         state_ = state;
         assertThat(state_ != EXEC);
-        IOContext::getCurrentContextFiber()->context_ = jump_fcontext(t_current_fiber->context_, nullptr).fctx;
+        getCurrentMainFiber()->context_ = jump_fcontext(t_current_fiber->context_, nullptr).fctx;
     }
 
     void Fiber::yield(State state) {
@@ -72,7 +74,7 @@ namespace sylar {
     }
 
     void Fiber::run(boost::context::detail::transfer_t arg) {
-        IOContext::getCurrentContextFiber()->context_ = arg.fctx;
+        getCurrentMainFiber()->context_ = arg.fctx;
 
         {
             auto* fiber = getCurrentFiber();
@@ -88,7 +90,7 @@ namespace sylar {
                 spdlog::error("Fiber::run error");
             }
         }
-        t_current_fiber = IOContext::getCurrentContextFiber();
+        t_current_fiber = getCurrentMainFiber();
         t_current_fiber->state_ = EXEC;
 
         jump_fcontext(t_current_fiber->context_, nullptr);

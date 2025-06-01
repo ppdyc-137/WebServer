@@ -6,6 +6,7 @@ add_library(sylar SHARED
     stream/stream.cpp
     synchronization/futex.cpp
     io_context.cpp
+    processor.cpp
     util.cpp
 )
 

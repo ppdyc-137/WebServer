@@ -55,7 +55,7 @@ void test_socket() {
 
 int main() {
     spdlog::set_level(spdlog::level::debug);
-    sylar::IOContext scheduler(true);
-    scheduler.schedule(test_socket);
+    sylar::IOContext scheduler(2, true);
+    scheduler.spawn(test_socket);
     scheduler.execute();
 }

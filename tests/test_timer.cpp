@@ -20,7 +20,7 @@ void test_timer() {
 
 int main() {
     spdlog::set_level(spdlog::level::debug);
-    sylar::IOContext scheduler;
-    scheduler.schedule(test_timer);
+    sylar::IOContext scheduler(2);
+    scheduler.spawn(test_timer);
     scheduler.execute();
 }

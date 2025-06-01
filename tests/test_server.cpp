@@ -1,5 +1,5 @@
-#include "io_context.h"
 #include "file/socket.h"
+#include "io_context.h"
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -20,11 +20,11 @@ void handle(int fd) {
     while (true) {
         auto ret = socket_read(sock, buf);
         if (ret <= 0) {
-            spdlog::debug("{} disconnect", sock.fileNo());
+            // spdlog::debug("{} disconnect", sock.fileNo());
             break;
         }
         auto read = std::string(buf, static_cast<size_t>(ret));
-        spdlog::debug("{} read {}: {}", sock.fileNo(), ret, read);
+        // spdlog::debug("{} read {}: {}", sock.fileNo(), ret, read);
         socket_write(sock, response);
     }
     file_close(std::move(sock));
@@ -44,6 +44,6 @@ void test_socket() {
 int main() {
     // spdlog::set_level(spdlog::level::debug);
     sylar::IOContext scheduler;
-    scheduler.schedule(test_socket);
+    scheduler.spawn(test_socket);
     scheduler.execute();
 }

@@ -1,58 +1,75 @@
 #pragma once
 
 #include "detail/fiber.h"
-#include "detail/timer.h"
+#include "processor.h"
+#include "runqueue.h"
+#include "util.h"
 
-#include <cstdint>
-#include <liburing.h>
-#include <optional>
-#include <queue>
 #include <spdlog/spdlog.h>
 
-static constexpr unsigned int RING_SIZE = 256;
 namespace sylar {
-    class IOContext : public TimerManager {
+    class IOContext {
     public:
         using Func = std::function<void()>;
         using Task = Fiber*;
 
-        explicit IOContext(bool hook = false, unsigned int entries = RING_SIZE);
-        ~IOContext();
+        explicit IOContext(size_t thread_count = std::thread::hardware_concurrency(), bool hook = false) : hook_(hook) {
+            assertThat(instance == nullptr);
+            instance = this;
+            threads_.resize(thread_count);
+            processors_.resize(thread_count);
+        }
+        ~IOContext() {
+            for (auto& thread : threads_) {
+                thread.join();
+            }
+        }
+
+        static IOContext* getInstance() {
+            assertThat(instance);
+            return instance;
+        }
 
         void execute();
-        bool runOnce();
 
-        void schedule(Func const& func) { schedule(getTask(func)); }
-        void schedule(Task);
+        // spawn a task, like keyword go in golang
+        // by default push task into processor's local task queue, if it's full, push the task into gloabl queue
+        static void spawn(Func const& func) {
+            assertThat(instance);
 
-        uint64_t getPendingOps() const { return pending_ops_; }
+            auto* processor = Processor::getProcessor();
+            if (processor == nullptr || processor->isFull()) {
+                instance->emplaceTask(func);
+            } else {
+                processor->emplaceTask(func);
+            }
+        }
+        static void spawn(Task task) {
+            assertThat(instance);
 
-        static IOContext* getCurrentContext() { return t_context; }
-        static Fiber* getCurrentContextFiber() { return &t_context_fiber; }
-
-        static void spawn(Func const& func);
-        static void spawn(Task);
+            auto* processor = Processor::getProcessor();
+            if (processor == nullptr || processor->isFull()) {
+                instance->emplaceTask(task);
+            } else {
+                processor->emplaceTask(task);
+            }
+        }
 
     private:
-        Task getTask(Func const&);
+        friend class Processor;
+        size_t stealTasks(uint64_t id, RunQueue& rq);
 
-        void runTask(Func const& func) { runTask(getTask(func)); }
-        void runTask(Task);
+        void emplaceTask(Func const& func) { rq_.emplace(func); }
+        void emplaceTask(Task task) { rq_.emplace(task); }
 
-        void waitEvent(std::optional<std::chrono::system_clock::duration>);
+        bool hook_;
 
-        friend struct UringOp;
-        struct io_uring_sqe* getSqe();
+        RunQueue rq_;
 
-        io_uring uring_{};
+        std::vector<std::thread> threads_;
+        std::vector<Processor*> processors_;
 
-        std::atomic<uint64_t> pending_ops_;
-
-        std::queue<Task> ready_tasks_;
-        std::queue<Task> free_tasks_;
-
-        static inline thread_local IOContext* t_context{};
-        static inline thread_local Fiber t_context_fiber{};
+        static inline IOContext* instance;
     };
 
 } // namespace sylar

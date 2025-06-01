@@ -1,5 +1,5 @@
 #include "hook.h"
-#include "io_context.h"
+#include "processor.h"
 #include "uring_op.h"
 
 #include <cerrno>
@@ -29,7 +29,7 @@ namespace sylar {
     return res
 
 #define HOOK_SYSCALL(name, ...)                                                                                        \
-    if (!hook_enable || !sylar::IOContext::getCurrentContext()) {                                                      \
+    if (!hook_enable || !sylar::Processor::getProcessor()) {                                                           \
         return name##_f(__VA_ARGS__);                                                                                  \
     }                                                                                                                  \
     HOOK_FUNCTION_IMPL(name, __VA_ARGS__)

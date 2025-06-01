@@ -19,7 +19,7 @@ void test_file() {
 int main() {
     spdlog::set_level(spdlog::level::debug);
 
-    sylar::IOContext context;
-    context.schedule(test_file);
-    context.execute();
+    sylar::IOContext scheduler;
+    scheduler.spawn(test_file);
+    scheduler.execute();
 }
