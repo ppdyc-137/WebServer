@@ -46,5 +46,8 @@ namespace sylar {
         }
         init_finish.arrive_and_wait();
     }
+    void IOContext::emplaceTask(Task task) {
+        assertThat(rq_.try_push(task), "global queue is full");
+    }
 
 } // namespace sylar

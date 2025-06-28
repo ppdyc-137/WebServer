@@ -39,14 +39,14 @@ namespace sylar {
             io_uring_sqe_set_data(sqe, data);
             io_uring_prep_link_timeout(sqe, tp, IORING_TIMEOUT_BOOTTIME);
 
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
         }
         void prep_cancel(UringData* data) {
             auto sqe = getSqe();
             io_uring_prep_cancel(sqe, this, IORING_ASYNC_CANCEL_ALL);
             io_uring_sqe_set_data(sqe, data);
 
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
         }
 
         bool yield_{false};
@@ -82,35 +82,35 @@ namespace sylar {
         [[nodiscard("need to call await")]]
         UringOp&& prep_openat(int dirfd, char const* path, int flags, mode_t mode) && {
             io_uring_prep_openat(sqe_, dirfd, path, flags, mode);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_socket(int domain, int type, int protocol, unsigned int flags = 0) && {
             io_uring_prep_socket(sqe_, domain, type, protocol, flags);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_accept(int fd, struct sockaddr* addr, socklen_t* addrlen, int flags = 0) && {
             io_uring_prep_accept(sqe_, fd, addr, addrlen, flags);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_connect(int fd, const struct sockaddr* addr, socklen_t addrlen) && {
             io_uring_prep_connect(sqe_, fd, addr, addrlen);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_read(int fd, void* buf, unsigned int len, std::uint64_t offset = static_cast<uint64_t>(-1)) && {
             io_uring_prep_read(sqe_, fd, buf, len, offset);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
@@ -118,49 +118,49 @@ namespace sylar {
         UringOp&& prep_write(int fd, const void* buf, unsigned int len,
                              std::uint64_t offset = static_cast<uint64_t>(-1)) && {
             io_uring_prep_write(sqe_, fd, buf, len, offset);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_recv(int fd, void* buf, size_t len, int flags) && {
             io_uring_prep_recv(sqe_, fd, buf, len, flags);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_send(int fd, const void* buf, size_t len, int flags) && {
             io_uring_prep_send(sqe_, fd, buf, len, flags);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_close(int fd) && {
             io_uring_prep_close(sqe_, fd);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         [[nodiscard("need to call await")]]
         UringOp&& prep_link_timeout(struct __kernel_timespec* ts, unsigned int flags) && {
             io_uring_prep_link_timeout(sqe_, ts, flags);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         UringOp&& prep_futex_wait(uint32_t* futex, uint64_t val, uint64_t mask, uint32_t futex_flags,
                                   unsigned int flags) && {
             io_uring_prep_futex_wait(sqe_, futex, val, mask, futex_flags, flags);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 
         UringOp&& prep_futex_wake(uint32_t* futex, uint64_t val, uint64_t mask, uint32_t futex_flags,
                                   unsigned int flags) && {
             io_uring_prep_futex_wake(sqe_, futex, val, mask, futex_flags, flags);
-            spdlog::debug("{}", __PRETTY_FUNCTION__);
+            spdlog::trace("{}", __PRETTY_FUNCTION__);
             return std::move(*this);
         }
 

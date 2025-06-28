@@ -1,4 +1,5 @@
 #include "io_context.h"
+#include "util.h"
 
 #include <chrono>
 #include <latch>
@@ -18,7 +19,8 @@ void test_worksteal() {
     for (int i = 0; i < count; i++) {
         IOContext::spawn([&, i]() {
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            spdlog::debug("hello {} from {}", i, Processor::getProcessorID());
+            // sleepFor(std::chrono::seconds(1));
+            spdlog::info("hello {} from {}", i, Processor::getProcessorID());
             finish.count_down();
         });
     }
@@ -29,7 +31,7 @@ void test_worksteal() {
 }
 
 int main() {
-    // spdlog::set_level(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::debug);
 
     sylar::IOContext scheduler(nr_p);
     scheduler.execute();

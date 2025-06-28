@@ -20,30 +20,39 @@ void handle(int fd) {
     while (true) {
         auto ret = socket_read(sock, buf);
         if (ret <= 0) {
-            // spdlog::debug("{} disconnect", sock.fileNo());
+            spdlog::debug("{} disconnect", sock.fileNo());
             break;
         }
         auto read = std::string(buf, static_cast<size_t>(ret));
-        // spdlog::debug("{} read {}: {}", sock.fileNo(), ret, read);
+        spdlog::debug("{} read {}: {}", sock.fileNo(), ret, read);
         socket_write(sock, response);
     }
     file_close(std::move(sock));
 }
 
+constexpr size_t nr_p = 6;
 void test_socket() {
     spdlog::info("test_socket");
 
-    auto sock = socket_listen(*AddressResolver().host("127.0.0.1").port(8080).resolve_one(), SOMAXCONN);
+    auto sockfd = socket_listen(*AddressResolver().host("127.0.0.1").port(8080).resolve_one(), SOMAXCONN).releaseFile();
     spdlog::info("Listening on port 8080...");
-    while (true) {
-        auto client_sock = socket_accept(sock).releaseFile();
-        IOContext::spawn(([client_sock]() { handle(client_sock); }));
+    for (size_t i = 0; i < nr_p; i++) {
+        IOContext::spawnAt(i, [sockfd]() {
+            while (true) {
+                auto client_sock = socket_accept(sockfd).releaseFile();
+                IOContext::spawn(([client_sock]() { handle(client_sock); }));
+            }
+        });
     }
+    // while (true) {
+    //     auto client_sock = socket_accept(sockfd).releaseFile();
+    //     IOContext::spawn(([client_sock]() { handle(client_sock); }));
+    // }
 }
 
 int main() {
     // spdlog::set_level(spdlog::level::debug);
-    sylar::IOContext scheduler;
+    sylar::IOContext scheduler(nr_p);
     scheduler.spawn(test_socket);
     scheduler.execute();
 }

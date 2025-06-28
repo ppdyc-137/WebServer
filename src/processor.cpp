@@ -45,7 +45,7 @@ namespace sylar {
         spdlog::debug("Processor {}: Executing", id_);
         while (true) {
             bool has_job = execOnce();
-            if (rq_.size() != 0) {
+            if (!rq_.was_empty()) {
                 continue;
             }
 
@@ -61,7 +61,7 @@ namespace sylar {
     }
 
     bool Processor::execOnce() {
-        for (Task task = rq_.pop(); task != nullptr; task = rq_.pop()) {
+        for (Task task = rq_.try_pop(); task != nullptr; task = rq_.try_pop()) {
             execTask(task);
         }
 
@@ -119,7 +119,13 @@ namespace sylar {
         if (state == Fiber::READY) {
             emplaceTask(task);
         } else if (state == Fiber::TERM || state == Fiber::EXCEPT) {
-            rq_.emplace_free(task);
+            rq_.push_free(task);
+        }
+    }
+
+    void Processor::emplaceTask(Task task) {
+        if (!rq_.try_push(task)) {
+            IOContext::getInstance()->emplaceTask(task);
         }
     }
 

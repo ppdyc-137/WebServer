@@ -9,7 +9,7 @@
 #include <spdlog/spdlog.h>
 
 static constexpr unsigned int RING_SIZE = 256;
-static constexpr uint64_t MAX_TASKQUEUE_SIZE = 256;
+static constexpr size_t RUNQUEUE_SIZE = 256;
 namespace sylar {
     class Processor : public TimerManager {
     public:
@@ -21,13 +21,12 @@ namespace sylar {
 
         void execute();
 
-        void emplaceTask(Func const& func) { rq_.emplace(func); }
-        void emplaceTask(Task task) { rq_.emplace(task); }
+        // push task into local runqueue, if it's full, push into global runqueue
+        void emplaceTask(Func const& func) { emplaceTask(rq_.buildTask(func)); }
+        void emplaceTask(Task task);
         size_t stealTasks(RunQueue& rq) { return rq_.steal(rq, false); }
 
         uint64_t getPendingOps() const { return pending_ops_; }
-
-        bool isFull() { return rq_.size() >= MAX_TASKQUEUE_SIZE; }
 
         // get current thread's processor
         static Processor* getProcessor() { return t_processor; }
@@ -51,7 +50,7 @@ namespace sylar {
 
         std::atomic<uint64_t> pending_ops_;
 
-        RunQueue rq_;
+        RunQueue rq_{RUNQUEUE_SIZE};
 
         static inline thread_local Processor* t_processor{};
         static inline thread_local Fiber t_processor_fiber{};

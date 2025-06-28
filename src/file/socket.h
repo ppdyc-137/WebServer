@@ -91,6 +91,7 @@ namespace sylar {
     SocketListener socket_listen(SocketHandle sock, int backlog);
 
     SocketHandle socket_accept(SocketListener& listenr);
+    SocketHandle socket_accept(int sockfd);
 
     SocketHandle socket_connect(SocketAddress const& addr);
 

@@ -38,7 +38,7 @@ namespace sylar {
             assertThat(instance);
 
             auto* processor = Processor::getProcessor();
-            if (processor == nullptr || processor->isFull()) {
+            if (processor == nullptr) {
                 instance->emplaceTask(func);
             } else {
                 processor->emplaceTask(func);
@@ -48,23 +48,35 @@ namespace sylar {
             assertThat(instance);
 
             auto* processor = Processor::getProcessor();
-            if (processor == nullptr || processor->isFull()) {
+            if (processor == nullptr) {
                 instance->emplaceTask(task);
             } else {
                 processor->emplaceTask(task);
             }
+        }
+        static void spawnAt(size_t id, Func const& func) {
+            assertThat(instance);
+
+            auto* processor = instance->processors_[id];
+            processor->emplaceTask(func);
+        }
+        static void spawnAt(size_t id, Task task) {
+            assertThat(instance);
+
+            auto* processor = instance->processors_[id];
+            processor->emplaceTask(task);
         }
 
     private:
         friend class Processor;
         size_t stealTasks(uint64_t id, RunQueue& rq);
 
-        void emplaceTask(Func const& func) { rq_.emplace(func); }
-        void emplaceTask(Task task) { rq_.emplace(task); }
+        void emplaceTask(Func const& func) { emplaceTask(rq_.buildTask(func)); }
+        void emplaceTask(Task task);
 
         bool hook_;
 
-        RunQueue rq_;
+        RunQueue rq_{1024};
 
         std::vector<std::thread> threads_;
         std::vector<Processor*> processors_;

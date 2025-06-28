@@ -51,6 +51,8 @@ namespace sylar {
 
         boost::context::detail::fcontext_t context_{};
 
+        Fiber* next_{};
+
         static inline thread_local Fiber* t_current_fiber{};
     };
 

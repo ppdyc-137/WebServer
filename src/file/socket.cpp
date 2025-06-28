@@ -118,6 +118,11 @@ namespace sylar {
         checkRetUring(fd);
         return SocketHandle{fd};
     }
+    SocketHandle socket_accept(int sockfd) {
+        int fd = UringOp().prep_accept(sockfd, nullptr, nullptr, 0).await();
+        checkRetUring(fd);
+        return SocketHandle{fd};
+    }
 
     SocketHandle socket_connect(SocketAddress const& addr) {
         SocketHandle sock = createSocket(addr.family(), addr.socktype(), addr.protocol());
