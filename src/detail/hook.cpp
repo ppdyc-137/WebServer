@@ -14,13 +14,13 @@ namespace {
     thread_local bool hook_enable = false;
 }
 
-namespace sylar {
+namespace async {
     bool isHookEnable() { return hook_enable; }
     void setHookEnable(bool enable) { hook_enable = enable; }
-} // namespace sylar
+} // namespace async
 
 #define HOOK_FUNCTION_IMPL(name, ...)                                                                                  \
-    auto res = sylar::UringOp().prep_##name(__VA_ARGS__).await();                                                      \
+    auto res = async::UringOp().prep_##name(__VA_ARGS__).await();                                                      \
     if (res < 0) {                                                                                                     \
         errno = -res;                                                                                                  \
         res = -1;                                                                                                      \
@@ -29,7 +29,7 @@ namespace sylar {
     return res
 
 #define HOOK_SYSCALL(name, ...)                                                                                        \
-    if (!hook_enable || !sylar::Processor::getProcessor()) {                                                           \
+    if (!hook_enable || !async::Processor::getProcessor()) {                                                           \
         return name##_f(__VA_ARGS__);                                                                                  \
     }                                                                                                                  \
     HOOK_FUNCTION_IMPL(name, __VA_ARGS__)

@@ -5,7 +5,7 @@
 #include "util.h"
 #include <cstddef>
 
-namespace sylar {
+namespace async {
     struct StdioStream : Stream {
         explicit StdioStream(FileHandle& fileIn, FileHandle& fileOut) : file_int_(fileIn), file_out_(fileOut) {}
 
@@ -30,4 +30,4 @@ namespace sylar {
         return stream;
     }
 
-} // namespace sylar
+} // namespace async

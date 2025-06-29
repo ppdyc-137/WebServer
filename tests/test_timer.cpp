@@ -4,7 +4,7 @@
 #include <chrono>
 #include <spdlog/spdlog.h>
 
-using namespace sylar;
+using namespace async;
 
 void sleep(int sec) {
     while (true) {
@@ -20,7 +20,7 @@ void test_timer() {
 
 int main() {
     spdlog::set_level(spdlog::level::debug);
-    sylar::IOContext scheduler(2);
+    async::IOContext scheduler(2);
     scheduler.spawn(test_timer);
     scheduler.execute();
 }

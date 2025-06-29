@@ -9,7 +9,7 @@
 
 #include <string>
 
-namespace sylar {
+namespace async {
     struct SocketAddress {
         SocketAddress() = default;
 
@@ -98,4 +98,4 @@ namespace sylar {
     int socket_read(SocketHandle& sock, std::span<char> buffer, UringOp::timeout_type timeout = std::nullopt);
     int socket_write(SocketHandle& sock, std::span<char const> buffer, UringOp::timeout_type timeout = std::nullopt);
 
-} // namespace sylar
+} // namespace async

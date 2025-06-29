@@ -11,7 +11,7 @@
 #include <span>
 #include <system_error>
 
-namespace sylar {
+namespace async {
 
     inline constexpr std::size_t STREAM_BUFFER_SIZE = 8192;
 
@@ -153,4 +153,4 @@ namespace sylar {
         return OwningStream(std::make_unique<Stream>(std::forward<Args>(args)...));
     }
 
-} // namespace sylar
+} // namespace async

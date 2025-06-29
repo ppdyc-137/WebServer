@@ -5,7 +5,7 @@
 #include <liburing.h>
 #include <spdlog/spdlog.h>
 
-namespace sylar {
+namespace async {
     namespace {
         size_t randamN(size_t N) { return static_cast<size_t>(rand()) % N; }
     } // namespace
@@ -50,4 +50,4 @@ namespace sylar {
         assertThat(rq_.try_push(task), "global queue is full");
     }
 
-} // namespace sylar
+} // namespace async

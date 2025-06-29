@@ -4,7 +4,7 @@
 #include "stream.h"
 #include "util.h"
 
-namespace sylar {
+namespace async {
     struct SocketStream : Stream {
         explicit SocketStream(SocketHandle file) : file_(std::move(file)) {}
 
@@ -25,4 +25,4 @@ namespace sylar {
         SocketHandle file_;
     };
 
-} // namespace sylar
+} // namespace async

@@ -7,7 +7,7 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 
-using namespace sylar;
+using namespace async;
 
 size_t nr_p = 40;
 int count = 240;
@@ -33,7 +33,7 @@ void test_worksteal() {
 int main() {
     spdlog::set_level(spdlog::level::debug);
 
-    sylar::IOContext scheduler(nr_p);
+    async::IOContext scheduler(nr_p);
     scheduler.execute();
 
     test_worksteal();

@@ -6,7 +6,7 @@
 #include <functional>
 #include <memory>
 
-namespace sylar {
+namespace async {
 
     class Fiber {
     public:
@@ -62,4 +62,4 @@ namespace sylar {
         static inline std::atomic<uint64_t> next_fiber_id{};
     };
 
-} // namespace sylar
+} // namespace async

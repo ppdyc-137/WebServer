@@ -1,12 +1,9 @@
 #include "file/socket.h"
 #include "io_context.h"
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-
 #include <spdlog/spdlog.h>
 
-using namespace sylar;
+using namespace async;
 
 const std::string response = "HTTP/1.1 200 OK\r\n"
                              "Content-Type: text/html\r\n"
@@ -52,7 +49,7 @@ void test_socket() {
 
 int main() {
     // spdlog::set_level(spdlog::level::debug);
-    sylar::IOContext scheduler(nr_p);
+    async::IOContext scheduler(nr_p);
     scheduler.spawn(test_socket);
     scheduler.execute();
 }

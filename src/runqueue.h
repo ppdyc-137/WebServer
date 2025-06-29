@@ -5,7 +5,7 @@
 #include <atomic>
 #include <functional>
 
-namespace sylar {
+namespace async {
     class RunQueue {
     public:
         explicit RunQueue(size_t cap) : cap_(cap), top_(0), bottom_(0), tasks_(cap) {}
@@ -123,4 +123,4 @@ namespace sylar {
         std::vector<Task> tasks_;
         Task free_list_{};
     };
-} // namespace sylar
+} // namespace async

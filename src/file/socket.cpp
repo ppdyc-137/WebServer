@@ -6,7 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <sys/socket.h>
 
-namespace sylar {
+namespace async {
     std::optional<AddressResolver::ResolveResult> AddressResolver::resolve_all() {
         if (host_.empty()) {
             return std::nullopt;
@@ -141,4 +141,4 @@ namespace sylar {
                                  .await());
     }
 
-} // namespace sylar
+} // namespace async

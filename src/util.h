@@ -4,7 +4,7 @@
 #include <liburing.h>
 #include <source_location>
 
-namespace sylar {
+namespace async {
     void schedSetThreadAffinity(std::size_t cpu);
 
     template <class Rep, class Period>
@@ -28,4 +28,4 @@ namespace sylar {
     void assertThat(bool res, const char* msg = nullptr,
                     std::source_location location = std::source_location::current());
 
-} // namespace sylar
+} // namespace async

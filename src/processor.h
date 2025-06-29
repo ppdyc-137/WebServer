@@ -10,7 +10,7 @@
 
 static constexpr unsigned int RING_SIZE = 256;
 static constexpr size_t RUNQUEUE_SIZE = 256;
-namespace sylar {
+namespace async {
     class Processor : public TimerManager {
     public:
         using Func = std::function<void()>;
@@ -59,4 +59,4 @@ namespace sylar {
         static inline thread_local Processor* t_processor{};
     };
 
-} // namespace sylar
+} // namespace async

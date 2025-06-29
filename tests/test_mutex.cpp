@@ -9,7 +9,7 @@
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/spdlog.h>
 
-using namespace sylar;
+using namespace async;
 
 void test_cond() {
     ConditionVariable cond;

@@ -7,7 +7,7 @@
 
 #include "spdlog/pattern_formatter.h"
 
-namespace sylar {
+namespace async {
 
     class ProcessorFiberFlag : public spdlog::custom_flag_formatter {
     public:
@@ -42,4 +42,4 @@ namespace sylar {
         } g_log_initer;
     } // namespace
 
-} // namespace sylar
+} // namespace async

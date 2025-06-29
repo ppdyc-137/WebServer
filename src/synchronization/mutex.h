@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <spdlog/spdlog.h>
 
-namespace sylar {
+namespace async {
     struct Mutex {
     public:
         bool try_lock() {
@@ -117,4 +117,4 @@ namespace sylar {
         Futex counter_;
     };
 
-} // namespace sylar
+} // namespace async

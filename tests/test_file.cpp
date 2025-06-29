@@ -5,7 +5,7 @@
 #include <spdlog/spdlog.h>
 #include <string>
 
-using namespace sylar;
+using namespace async;
 
 void test_file() {
     char buf[64];
@@ -19,7 +19,7 @@ void test_file() {
 int main() {
     spdlog::set_level(spdlog::level::debug);
 
-    sylar::IOContext scheduler;
+    async::IOContext scheduler;
     scheduler.spawn(test_file);
     scheduler.execute();
 }

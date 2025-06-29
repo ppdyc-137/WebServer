@@ -5,7 +5,7 @@
 #include <span>
 #include <utility>
 
-namespace sylar {
+namespace async {
     struct BytesBuffer {
     public:
         BytesBuffer() noexcept = default;
@@ -44,4 +44,4 @@ namespace sylar {
         std::size_t size_{};
     };
 
-} // namespace sylar
+} // namespace async

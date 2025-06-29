@@ -7,7 +7,7 @@
 #include <atomic>
 #include <limits>
 
-namespace sylar {
+namespace async {
     int futex_wait(std::atomic<uint32_t>* futex, uint32_t val, uint32_t mask = FUTEX_BITSET_MATCH_ANY);
     int futex_notify(std::atomic<uint32_t>* futex, std::size_t count, uint32_t mask = FUTEX_BITSET_MATCH_ANY);
     int futex_notify_sync(std::atomic<uint32_t>* futex, std::size_t count, uint32_t mask = FUTEX_BITSET_MATCH_ANY);
@@ -27,4 +27,4 @@ namespace sylar {
             checkRetUring(futex_notify(this, FUTEX_NOTIFY_ALL, mask));
         }
     };
-} // namespace sylar
+} // namespace async

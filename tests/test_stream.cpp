@@ -5,7 +5,7 @@
 
 #include <spdlog/spdlog.h>
 
-using namespace sylar;
+using namespace async;
 
 void test_stream() {
     while (true) {

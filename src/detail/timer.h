@@ -5,7 +5,7 @@
 #include <memory>
 #include <set>
 
-namespace sylar {
+namespace async {
     class TimerManager {
         using Func = std::function<void()>;
 
@@ -46,4 +46,4 @@ namespace sylar {
         std::set<std::shared_ptr<Timer>, Timer::Comparator> timers_;
     };
 
-} // namespace sylar
+} // namespace async

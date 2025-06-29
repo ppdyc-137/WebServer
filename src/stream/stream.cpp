@@ -1,7 +1,7 @@
 #include "stream.h"
 #include <algorithm>
 
-namespace sylar {
+namespace async {
     char BorrowedStream::get() {
         if (bufempty()) {
             index_end_ = index_in_ = 0;
@@ -164,4 +164,4 @@ namespace sylar {
         index_end_ = index_in_ + n;
     }
 
-} // namespace sylar
+} // namespace async

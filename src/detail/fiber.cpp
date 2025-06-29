@@ -7,7 +7,7 @@
 #include <spdlog/spdlog.h>
 #include <ucontext.h>
 
-namespace sylar {
+namespace async {
     using namespace boost::context::detail;
 
     namespace {
@@ -105,4 +105,4 @@ namespace sylar {
         jump_fcontext(t_current_fiber->context_, nullptr);
     }
 
-} // namespace sylar
+} // namespace async

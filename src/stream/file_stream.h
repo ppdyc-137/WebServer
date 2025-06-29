@@ -4,7 +4,7 @@
 #include "stream.h"
 #include "util.h"
 
-namespace sylar {
+namespace async {
     struct FileStream : Stream {
         explicit FileStream(FileHandle file) : file_(std::move(file)) {}
 
@@ -25,4 +25,4 @@ namespace sylar {
         FileHandle file_;
     };
 
-} // namespace sylar
+} // namespace async

@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 
-namespace sylar {
+namespace async {
     void schedSetThreadAffinity(size_t cpu) {
         cpu_set_t cpu_set;
         CPU_ZERO(&cpu_set);
@@ -58,4 +58,4 @@ namespace sylar {
         }
     }
 
-} // namespace sylar
+} // namespace async

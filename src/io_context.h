@@ -7,7 +7,7 @@
 
 #include <spdlog/spdlog.h>
 
-namespace sylar {
+namespace async {
     class IOContext {
     public:
         using Func = std::function<void()>;
@@ -84,4 +84,4 @@ namespace sylar {
         static inline IOContext* instance;
     };
 
-} // namespace sylar
+} // namespace async

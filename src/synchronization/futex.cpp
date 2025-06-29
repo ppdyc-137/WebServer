@@ -4,7 +4,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-namespace sylar {
+namespace async {
     constexpr unsigned int FUTEX_FLAGS = FUTEX2_SIZE_U32 | FUTEX2_PRIVATE;
 
     int futex_wait(std::atomic<uint32_t>* futex, uint32_t val, uint32_t mask) {
@@ -20,4 +20,4 @@ namespace sylar {
         return static_cast<int>(res);
     }
 
-} // namespace sylar
+} // namespace async

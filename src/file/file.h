@@ -13,7 +13,7 @@
 #include <span>
 #include <utility>
 
-namespace sylar {
+namespace async {
     struct [[nodiscard]] FileHandle {
         FileHandle() noexcept = default;
 
@@ -81,4 +81,4 @@ namespace sylar {
                 .await());
     }
 
-} // namespace sylar
+} // namespace async

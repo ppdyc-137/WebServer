@@ -5,10 +5,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-namespace sylar {
+namespace async {
     bool isHookEnable();
     void setHookEnable(bool enable);
-} // namespace sylar
+} // namespace async
 
 struct Handle {
     Handle() : handle_(dlopen("libc.so.6", RTLD_LAZY)) {

@@ -7,7 +7,7 @@
 #include <spdlog/spdlog.h>
 #include <utility>
 
-namespace sylar {
+namespace async {
     TimerManager::Timer::Timer(std::chrono::system_clock::duration period, std::function<void()> cb, bool recurring,
                                TimerManager* manager)
         : recurring_(recurring), period_(period), next_trigger_time_(std::chrono::system_clock::now() + period),
@@ -61,4 +61,4 @@ namespace sylar {
         return cbs;
     }
 
-} // namespace sylar
+} // namespace async

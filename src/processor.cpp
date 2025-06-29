@@ -11,7 +11,7 @@
 
 constexpr std::chrono::system_clock::duration MAX_EVENT_WAIT = std::chrono::milliseconds(10);
 
-namespace sylar {
+namespace async {
     Processor::Processor(uint64_t id, bool hook, unsigned int entries) : id_(id) {
         assertThat(t_processor == nullptr);
         t_processor = this;
@@ -129,4 +129,4 @@ namespace sylar {
         }
     }
 
-} // namespace sylar
+} // namespace async
