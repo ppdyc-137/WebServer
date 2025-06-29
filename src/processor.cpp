@@ -16,7 +16,7 @@ namespace sylar {
         assertThat(t_processor == nullptr);
         t_processor = this;
         checkRetUring(io_uring_queue_init(entries, &uring_, 0));
-        Fiber::t_current_fiber = &t_processor_fiber;
+        Fiber::t_current_fiber = &processor_fiber_;
 
         if (hook) {
             setHookEnable(true);
@@ -42,7 +42,7 @@ namespace sylar {
     }
 
     void Processor::execute() {
-        spdlog::debug("Processor {}: Executing", id_);
+        spdlog::debug("Executing: fiber: {}", static_cast<void*>(&processor_fiber_));
         while (true) {
             bool has_job = execOnce();
             if (!rq_.was_empty()) {

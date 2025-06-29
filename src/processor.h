@@ -31,7 +31,9 @@ namespace sylar {
         // get current thread's processor
         static Processor* getProcessor() { return t_processor; }
         static uint64_t getProcessorID() { return t_processor->id_; }
-        static Fiber* getProcessorFiber() { return &t_processor_fiber; }
+        static Fiber* getProcessorFiber() { return &t_processor->processor_fiber_; }
+        Fiber* getFiber() { return &processor_fiber_; }
+        uint64_t getId() const { return id_; }
 
     private:
         bool execOnce();
@@ -52,8 +54,9 @@ namespace sylar {
 
         RunQueue rq_{RUNQUEUE_SIZE};
 
+        Fiber processor_fiber_;
+
         static inline thread_local Processor* t_processor{};
-        static inline thread_local Fiber t_processor_fiber{};
     };
 
 } // namespace sylar

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <atomic>
 #include <boost/context/detail/fcontext.hpp>
+#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -31,6 +33,7 @@ namespace sylar {
             return state_str[static_cast<std::size_t>(state_)];
         };
         State getState() { return state_; }
+        uint64_t getId() const { return fiber_id_; }
 
     private:
         friend class RunQueue;
@@ -46,6 +49,8 @@ namespace sylar {
         State state_{INIT};
         uint32_t stack_size_{};
 
+        uint64_t fiber_id_{};
+
         Func func_;
         std::unique_ptr<char[]> stack_;
 
@@ -54,6 +59,7 @@ namespace sylar {
         Fiber* next_{};
 
         static inline thread_local Fiber* t_current_fiber{};
+        static inline std::atomic<uint64_t> next_fiber_id{};
     };
 
 } // namespace sylar

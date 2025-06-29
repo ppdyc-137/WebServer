@@ -8,6 +8,7 @@ add_library(sylar SHARED
     io_context.cpp
     processor.cpp
     util.cpp
+    log.cpp
 )
 
 target_link_libraries(sylar PRIVATE
